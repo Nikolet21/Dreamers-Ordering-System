@@ -63,7 +63,6 @@ const coffees = [
 
 <template>
   <div class="product-section">
-    
     <section class="category-section">
       <h2 class="section-title">Our Signature Coffees</h2>
       <div class="product-grid">
