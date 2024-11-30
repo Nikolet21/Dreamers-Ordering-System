@@ -39,11 +39,15 @@
         <div class="products-section">
           <h4>Ordered Items:</h4>
           <div class="products-list">
-            <div v-for="(product) in displayedProducts(order)" :key="product.id" class="product-item">
+            <div v-for="product in displayedProducts(order)" :key="product.id" class="product-item">
               <img :src="product.image" :alt="product.name">
               <div class="product-details">
                 <span>{{ product.name }}</span>
-                <small>Qty: {{ product.quantity }}</small>
+                <div class="product-info">
+                  <small>Size: {{ product.size }}</small>
+                  <small>Qty: {{ product.quantity }}</small>
+                  <small>₱{{ product.totalPrice.toFixed(2) }}</small>
+                </div>
               </div>
             </div>
             <div v-if="order.products.length > 2" class="more-items" @click="viewReceipt(order)">
@@ -63,7 +67,7 @@
           <button
             class="complete-btn"
             @click="completeOrder(order)"
-            :disabled="order.status === 'Completed'"
+            :disabled="order.status === 'Completed' || order.status === 'Cancelled'"
           >
             <font-awesome-icon :icon="['fas', 'check']" />
             Done
@@ -137,11 +141,12 @@
             <h3>Order Details</h3>
             <div v-for="product in currentReceipt.products" :key="product.id" class="receipt-item">
               <div class="item-details">
-                <span class="item-name">{{ product.name }}</span>
+                <div class="item-name">{{ product.name }}</div>
                 <div class="item-info">
-                  <span class="item-quantity">Quantity: {{ product.quantity }}</span>
-                  <span class="item-price">₱{{ (product.price * product.quantity).toFixed(2) }}</span>
+                  <span>Size: {{ product.size }}</span>
+                  <span>Qty: {{ product.quantity }}</span>
                 </div>
+                <div class="item-price">₱{{ (product.price * product.quantity).toFixed(2) }}</div>
               </div>
             </div>
           </div>
@@ -165,8 +170,11 @@ import { ref, computed } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faEye, faEdit, faCheck, faTrash, faSearch, faUserSlash } from '@fortawesome/free-solid-svg-icons'
+import { useUserStore } from '@/stores/userStore'
 
 library.add(faEye, faEdit, faCheck, faTrash, faSearch, faUserSlash)
+
+const userStore = useUserStore()
 
 // Constants
 const ITEMS_PER_PAGE = 8
@@ -192,93 +200,9 @@ const currentReceipt = ref({
   products: []
 })
 
-// Mock Data
-const orders = ref([
-  {
-    id: '1003',
-    customerName: 'Michael Johnson',
-    orderTime: new Date('2024-02-20T13:15:00'),
-    status: 'Completed',
-    products: [
-      {
-        id: 6,
-        name: 'Hot Dark Chocolate',
-        quantity: 2,
-        image: 'src/assets/hotchoco.jpg',
-        price: 37.00
-      },
-      {
-        id: 1,
-        name: 'Milky Strawberry',
-        quantity: 1,
-        image: 'src/assets/milkstrawberry.jpg',
-        price: 37.00
-      },
-      {
-        id: 2,
-        name: 'Dream Latte',
-        quantity: 1,
-        image: 'src/assets/vanillalatte.jpg',
-        price: 37.00
-      }
-    ]
-  },
-  {
-    id: '1002',
-    customerName: 'Jane Smith',
-    orderTime: new Date('2024-02-20T11:45:00'),
-    status: 'Processing',
-    products: [
-      {
-        id: 4,
-        name: 'Dark Chocolate',
-        quantity: 2,
-        image: 'src/assets/darkchoco.jpg',
-        price: 37.00
-      },
-      {
-        id: 5,
-        name: 'Dreamy Yogurt',
-        quantity: 1,
-        image: 'src/assets/yogurt.jpg',
-        price: 37.00
-      }
-    ]
-  },
-  {
-    id: '1001',
-    customerName: 'John Doe',
-    orderTime: new Date('2024-02-20T10:30:00'),
-    status: 'Pending',
-    products: [
-      {
-        id: 1,
-        name: 'Milky Strawberry',
-        quantity: 2,
-        image: 'src/assets/milkstrawberry.jpg',
-        price: 37.00
-      },
-      {
-        id: 2,
-        name: 'Dream Latte',
-        quantity: 1,
-        image: 'src/assets/vanillalatte.jpg',
-        price: 37.00
-      },
-      {
-        id: 3,
-        name: 'Caramel Macchiato',
-        quantity: 1,
-        image: 'src/assets/caramel.jpg',
-        price: 37.00
-      }
-    ]
-  }
-])
-
 // Computed Properties
 const filteredOrders = computed(() => {
-  let filtered = orders.value
+  let filtered = userStore.getPendingOrders
 
   // Filter by status
   if (currentFilter.value !== 'All') {
@@ -294,7 +218,7 @@ const filteredOrders = computed(() => {
   }
 
   // Sort by date (newest first)
-  return filtered.sort((a, b) => b.orderTime - a.orderTime)
+  return filtered.sort((a, b) => new Date(b.orderTime) - new Date(a.orderTime))
 })
 
 const totalPages = computed(() => {
@@ -395,9 +319,9 @@ const confirmEdit = () => {
     return
   }
 
-  const index = orders.value.findIndex(o => o.id === editingOrder.value.id)
+  const index = userStore.getPendingOrders.findIndex(o => o.id === editingOrder.value.id)
   if (index !== -1) {
-    orders.value[index] = { ...orders.value[index], status: editingOrder.value.status }
+    userStore.getPendingOrders[index] = { ...userStore.getPendingOrders[index], status: editingOrder.value.status }
   }
   showEditModal.value = false
   editingOrder.value = {
@@ -612,8 +536,11 @@ const calculateTotal = (products) => {
   font-weight: 500;
 }
 
-.product-details small {
-  color: #757575;
+.product-info {
+  display: flex;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: #666;
 }
 
 .action-buttons {
@@ -674,8 +601,9 @@ const calculateTotal = (products) => {
 }
 
 .complete-btn:disabled {
-  background-color: #C8E6C9;
+  background-color: #ccc;
   cursor: not-allowed;
+  opacity: 0.7;
 }
 
 /* Pagination Styles */
@@ -880,30 +808,31 @@ const calculateTotal = (products) => {
 }
 
 .receipt-item {
-  padding: 10px 0;
-  border-bottom: 1px solid #f5f5f5;
-}
-
-.receipt-item:last-child {
-  border-bottom: none;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
 }
 
 .item-details {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0.25rem;
 }
 
 .item-name {
   font-weight: 500;
-  color: #5d4037;
+  color: #333;
 }
 
 .item-info {
   display: flex;
-  justify-content: space-between;
-  color: #8d6e63;
+  gap: 1rem;
   font-size: 0.9rem;
+  color: #666;
+}
+
+.item-price {
+  font-weight: 500;
+  color: #5D4037;
 }
 
 .receipt-total {
