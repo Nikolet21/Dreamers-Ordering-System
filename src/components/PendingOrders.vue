@@ -39,7 +39,7 @@
         <div class="products-section">
           <h4>Ordered Items:</h4>
           <div class="products-list">
-            <div v-for="(product, index) in displayedProducts(order)" :key="product.id" class="product-item">
+            <div v-for="(product) in displayedProducts(order)" :key="product.id" class="product-item">
               <img :src="product.image" :alt="product.name">
               <div class="product-details">
                 <span>{{ product.name }}</span>
