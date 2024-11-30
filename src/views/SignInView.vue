@@ -10,11 +10,6 @@ library.add(faEye, faEyeSlash)
 
 const userStore = useUserStore()
 
-const mockAccounts = [
-  { email: 'test@gmail.com', password: 'Password123!' },
-  { email: 'user@gmail.com', password: 'User@2024' },
-]
-
 const isLogin = ref(false)
 const email = ref('')
 const username = ref('')
@@ -103,17 +98,17 @@ const handleSubmit = () => {
   }
   validatePassword()
 
-  if (!emailError.value && !passwordError.value && 
+  if (!emailError.value && !passwordError.value &&
       (isLogin.value || (!usernameError.value && !confirmPasswordError.value))) {
     if (isLogin.value) {
-      const account = mockAccounts.find(
+      const account = userStore.accounts.find(
         (acc) => acc.email === email.value && acc.password === password.value,
       )
 
       if (account) {
         userStore.login({
           email: account.email,
-          username: account.username || email.value.split('@')[0]
+          username: account.username
         })
         console.log('Login successful:', account)
         router.push('/')
@@ -125,7 +120,9 @@ const handleSubmit = () => {
       const userData = {
         email: email.value,
         username: username.value,
+        password: password.value
       }
+      userStore.mockAccounts.push(userData)
       userStore.login(userData)
       console.log('Sign up data:', userData)
       alert('Sign up successful!')
