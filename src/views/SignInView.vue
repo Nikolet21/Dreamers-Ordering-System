@@ -101,17 +101,23 @@ const handleSubmit = () => {
   if (!emailError.value && !passwordError.value &&
       (isLogin.value || (!usernameError.value && !confirmPasswordError.value))) {
     if (isLogin.value) {
-      const account = userStore.accounts.find(
-        (acc) => acc.email === email.value && acc.password === password.value,
+      const account = userStore.accounts.find(acc => 
+        acc.email.toLowerCase() === email.value.toLowerCase() && 
+        acc.password === password.value
       )
 
       if (account) {
         userStore.login({
           email: account.email,
-          username: account.username
+          username: account.username,
+          role: account.role
         })
-        console.log('Login successful:', account)
-        router.push('/')
+        
+        if (['admin', 'staff', 'manager'].includes(account.role)) {
+          router.push('/management')
+        } else {
+          router.push('/')
+        }
       } else {
         alert('Invalid email or password.')
       }
@@ -120,11 +126,11 @@ const handleSubmit = () => {
       const userData = {
         email: email.value,
         username: username.value,
-        password: password.value
+        password: password.value,
+        role: 'user'
       }
       userStore.mockAccounts.push(userData)
       userStore.login(userData)
-      console.log('Sign up data:', userData)
       alert('Sign up successful!')
       router.push('/')
     }

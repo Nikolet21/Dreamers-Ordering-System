@@ -74,6 +74,24 @@ const placeOrder = () => {
     total: getTotalPrice(),
     orderNumber: Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
   }
+
+  // Add to pending orders
+  const order = {
+    id: Date.now(),
+    customerName: userStore.username || 'Guest',
+    orderTime: new Date().toISOString(),
+    status: 'Pending',
+    products: cartItems.value.map(item => ({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      image: item.image,
+      size: item.size,
+      totalPrice: item.price * item.quantity
+    }))
+  }
+  userStore.addPendingOrder(order)
   
   currentReceipt.value = receipt
   showReceipt.value = true
@@ -210,11 +228,15 @@ const handleProfileUpdate = (profileData) => {
           <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
           
           <div class="receipt-items">
-            <h3>Order Details</h3>
-            <div v-for="(item, index) in currentReceipt.items" :key="index" class="receipt-item">
-              <span class="item-name">{{ item.name }}</span>
-              <span class="item-quantity">x{{ item.quantity }}</span>
-              <span class="item-price">₱{{ item.totalPrice.toFixed(2) }}</span>
+            <div v-for="item in currentReceipt.items" :key="item.name" class="receipt-item">
+              <div class="item-details">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-info">
+                  <span>Size: {{ item.size }}</span>
+                  <span>Qty: {{ item.quantity }}</span>
+                </div>
+                <div class="item-price">₱{{ item.subtotal.toFixed(2) }}</div>
+              </div>
             </div>
           </div>
           
@@ -789,23 +811,31 @@ const handleProfileUpdate = (profileData) => {
 }
 
 .receipt-item {
-  display: grid;
-  grid-template-columns: 2fr 0.5fr 1fr;
-  gap: 10px;
-  margin: 8px 0;
-  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .item-name {
-  text-align: left;
+  font-weight: 500;
+  color: #333;
 }
 
-.item-quantity {
-  text-align: center;
+.item-info {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #666;
 }
 
 .item-price {
-  text-align: right;
+  font-weight: 500;
+  color: #5D4037;
 }
 
 .receipt-total {
