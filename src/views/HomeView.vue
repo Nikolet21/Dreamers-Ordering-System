@@ -104,6 +104,8 @@ const SignInView = () => {
           </div>
         </div>
         <button class="signin-button" @click="SignInView()">Sign in</button>
+
+        <!-- Responsive Hamburger Menu -->
         <div class="hamburger" @click="toggleMenu" :class="{ 'active': isMenuOpen }">
           <span></span>
           <span></span>
