@@ -56,12 +56,12 @@
         :disabled="currentPage === 1"
       >&lt;</button>
       <button
-        v-for="page in totalPages"
-        :key="page"
-        :class="['page-btn', { active: currentPage === page }]"
-        @click="goToPage(page)"
+        v-for="pageNum in displayedPageNumbers"
+        :key="pageNum"
+        :class="['page-btn', { active: currentPage === pageNum }]"
+        @click="goToPage(pageNum)"
       >
-        {{ page }}
+        {{ pageNum }}
       </button>
       <button
         class="page-btn"
@@ -285,6 +285,41 @@ const paginatedOrders = computed(() => {
   const start = (currentPage.value - 1) * ITEMS_PER_PAGE
   const end = start + ITEMS_PER_PAGE
   return filteredOrders.value.slice(start, end)
+})
+
+const displayedPageNumbers = computed(() => {
+  if (totalPages.value <= 5) {
+    return Array.from({ length: totalPages.value }, (_, i) => i + 1)
+  }
+
+  let pages = []
+  // Always show first page
+  pages.push(1)
+  
+  // Calculate middle pages
+  let middleStart = Math.max(2, currentPage.value - 1)
+  let middleEnd = Math.min(totalPages.value - 1, currentPage.value + 1)
+  
+  // Adjust if at the start
+  if (currentPage.value <= 3) {
+    middleStart = 2
+    middleEnd = 4
+  }
+  // Adjust if at the end
+  else if (currentPage.value >= totalPages.value - 2) {
+    middleStart = totalPages.value - 3
+    middleEnd = totalPages.value - 1
+  }
+
+  // Add middle pages
+  for (let i = middleStart; i <= middleEnd; i++) {
+    pages.push(i)
+  }
+  
+  // Always show last page
+  pages.push(totalPages.value)
+  
+  return pages
 })
 
 // Methods

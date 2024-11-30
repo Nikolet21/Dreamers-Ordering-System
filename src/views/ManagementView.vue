@@ -6,7 +6,7 @@ import { faUsers, faClipboardList, faStar, faUser } from '@fortawesome/free-soli
 
 library.add(faUsers, faClipboardList, faStar, faUser)
 
-const UserList = defineAsyncComponent(() => import('../components/UserList.vue'))
+const UsersList = defineAsyncComponent(() => import('../components/UsersList.vue'))
 const PendingOrders = defineAsyncComponent(() => import('../components/PendingOrders.vue'))
 const CustomerReview = defineAsyncComponent(() => import('../components/CustomerReview.vue'))
 
@@ -31,7 +31,7 @@ const switchComponent = (component) => {
         <span></span>
         <span></span>
       </button>
-      <h1>Coffee Management</h1>
+      <h1>Dreamers Coffee Management</h1>
       <div class="profile-icon">
         <font-awesome-icon :icon="['fas', 'user']" />
       </div>
@@ -80,7 +80,7 @@ const switchComponent = (component) => {
       <template v-if="currentComponent === 'welcome'">
         <h2>Welcome to Coffee Management System</h2>
       </template>
-      <UserList v-else-if="currentComponent === 'users'" />
+      <UsersList v-else-if="currentComponent === 'users'" />
       <PendingOrders v-else-if="currentComponent === 'orders'" />
       <CustomerReview v-else-if="currentComponent === 'reviews'" />
     </main>
