@@ -18,7 +18,7 @@
           moments of pure coffee bliss.
         </p>
         <button class="order-button" @click="handleOrderClick">
-          {{ userStore.isAuthenticated ? 'Order Now' : 'Sign In to Order' }}
+          {{ userStore.isLoggedIn ? 'Order Now' : 'Sign In to Order' }}
         </button>
       </div>
     </div>
@@ -34,7 +34,7 @@ const userStore = useUserStore()
 const emit = defineEmits(['showProducts'])
 
 const handleOrderClick = () => {
-  if (userStore.isAuthenticated) {
+  if (userStore.isLoggedIn) {
     emit('showProducts')
   } else {
     router.push('/signin')

@@ -5,6 +5,7 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faCartShopping, faTrash, faUser } from '@fortawesome/free-solid-svg-icons'
 import { useUserStore } from '@/stores/userStore'
+import ProfileModal from '@/components/ProfileModal.vue'
 
 library.add(faCartShopping, faTrash, faUser)
 
@@ -18,12 +19,26 @@ const Review = defineAsyncComponent(() => import('../components/ReviewSection.vu
 const currentView = ref('Home')
 const isMenuOpen = ref(false)
 const isCartOpen = ref(false)
+const isProfileOpen = ref(false)
+const isProfileModalOpen = ref(false);
 const cartItems = ref([])
 
 const setView = (view) => (currentView.value = view)
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value)
 const closeMenu = () => (isMenuOpen.value = false)
 const toggleCart = () => (isCartOpen.value = !isCartOpen.value)
+const toggleProfile = () => {
+  isProfileOpen.value = !isProfileOpen.value
+}
+
+const openProfileModal = () => {
+  isProfileModalOpen.value = true;
+  isProfileOpen.value = false;
+};
+
+const closeProfileModal = () => {
+  isProfileModalOpen.value = false;
+};
 
 const addToCart = (item) => {
   cartItems.value.push(item)
@@ -49,19 +64,19 @@ const getTotalPrice = () => {
   return cartItems.value.reduce((total, item) => total + item.totalPrice, 0)
 }
 
-const handleProfileClick = () => {
-  // Add profile page navigation here
-  console.log('Profile clicked')
-}
-
 const handleLogout = () => {
   userStore.logout()
   router.push('/')
+  isProfileOpen.value = false
 }
 
 const SignInView = () => {
   router.push('/signin')
 }
+
+const handleProfileUpdate = (profileData) => {
+  isProfileModalOpen.value = false;
+};
 </script>
 
 <template>
@@ -115,13 +130,14 @@ const SignInView = () => {
             </div>
           </div>
         </div>
-        <template v-if="userStore.isAuthenticated">
+        <template v-if="userStore.isLoggedIn">
           <div class="profile-dropdown">
-            <button class="profile-icon" @click="handleProfileClick">
+            <button class="profile-icon" @click="toggleProfile">
               <font-awesome-icon :icon="['fas', 'user']" />
             </button>
-            <div class="dropdown-content">
-              <span>{{ userStore.currentUser?.username }}</span>
+            <div v-show="isProfileOpen" class="dropdown-content">
+              <span>{{ userStore.username }}</span>
+              <button @click="openProfileModal" class="dropdown-item">Profile</button>
               <button @click="handleLogout" class="dropdown-item">Logout</button>
             </div>
           </div>
@@ -140,8 +156,8 @@ const SignInView = () => {
     </nav>
 
     <div class="main-content" :class="{ 'menu-open': isMenuOpen }">
-      <component 
-        :is="currentView === 'Home' ? Home : 
+      <component
+        :is="currentView === 'Home' ? Home :
             currentView === 'Product' ? Products :
             currentView === 'About' ? About :
             currentView === 'Facility' ? Facility :
@@ -150,6 +166,11 @@ const SignInView = () => {
         @add-to-cart="addToCart"
       />
     </div>
+    <ProfileModal
+      :is-open="isProfileModalOpen"
+      @close="closeProfileModal"
+      @update:profile="handleProfileUpdate"
+    />
   </div>
 </template>
 
@@ -585,6 +606,11 @@ const SignInView = () => {
   background-color: #6b4423;
 }
 
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
 .profile-icon {
   width: 40px;
   height: 40px;
@@ -603,15 +629,10 @@ const SignInView = () => {
   background-color: #3E2723;
 }
 
-.profile-dropdown {
-  position: relative;
-  display: inline-block;
-}
-
 .dropdown-content {
-  display: none;
   position: absolute;
   right: 0;
+  top: 100%;
   background-color: white;
   min-width: 160px;
   box-shadow: 0 8px 16px rgba(0,0,0,0.1);
@@ -619,10 +640,6 @@ const SignInView = () => {
   padding: 8px 0;
   z-index: 1000;
   margin-top: 5px;
-}
-
-.profile-dropdown:hover .dropdown-content {
-  display: block;
 }
 
 .dropdown-content span {
@@ -643,6 +660,7 @@ const SignInView = () => {
   color: #8b5e3c;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: all 0.2s ease;
 }
 
 .dropdown-item:hover {
