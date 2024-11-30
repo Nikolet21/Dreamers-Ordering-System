@@ -4,8 +4,11 @@ import { ref } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useUserStore } from '@/stores/userStore'
 
 library.add(faEye, faEyeSlash)
+
+const userStore = useUserStore()
 
 const mockAccounts = [
   { email: 'test@gmail.com', password: 'Password123!' },
@@ -108,6 +111,10 @@ const handleSubmit = () => {
       )
 
       if (account) {
+        userStore.login({
+          email: account.email,
+          username: account.username || email.value.split('@')[0]
+        })
         console.log('Login successful:', account)
         router.push('/')
       } else {
@@ -115,11 +122,12 @@ const handleSubmit = () => {
       }
     } else {
       // Handle sign up logic here
-      console.log('Sign up data:', {
+      const userData = {
         email: email.value,
         username: username.value,
-        password: password.value
-      })
+      }
+      userStore.login(userData)
+      console.log('Sign up data:', userData)
       alert('Sign up successful!')
       router.push('/')
     }

@@ -17,11 +17,30 @@
           unforgettable coffee experience. Each cup is crafted with passion and precision, ensuring
           moments of pure coffee bliss.
         </p>
-        <button class="order-button">Order Now</button>
+        <button class="order-button" @click="handleOrderClick">
+          {{ userStore.isAuthenticated ? 'Order Now' : 'Sign In to Order' }}
+        </button>
       </div>
     </div>
   </section>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
+
+const router = useRouter()
+const userStore = useUserStore()
+const emit = defineEmits(['showProducts'])
+
+const handleOrderClick = () => {
+  if (userStore.isAuthenticated) {
+    emit('showProducts')
+  } else {
+    router.push('/signin')
+  }
+}
+</script>
 
 <style scoped>
 .home-section {

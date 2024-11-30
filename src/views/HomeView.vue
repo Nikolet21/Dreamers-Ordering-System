@@ -3,9 +3,12 @@ import router from '@/router';
 import { defineAsyncComponent, ref } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faCartShopping, faTrash, faUser } from '@fortawesome/free-solid-svg-icons'
+import { useUserStore } from '@/stores/userStore'
 
-import { faCartShopping, faTrash } from '@fortawesome/free-solid-svg-icons'
-library.add(faCartShopping, faTrash)
+library.add(faCartShopping, faTrash, faUser)
+
+const userStore = useUserStore()
 
 const Products = defineAsyncComponent(() => import('../components/ProductSection.vue'))
 const Home = defineAsyncComponent(() => import('../components/HomeSection.vue'))
@@ -46,10 +49,19 @@ const getTotalPrice = () => {
   return cartItems.value.reduce((total, item) => total + item.totalPrice, 0)
 }
 
+const handleProfileClick = () => {
+  // Add profile page navigation here
+  console.log('Profile clicked')
+}
+
+const handleLogout = () => {
+  userStore.logout()
+  router.push('/')
+}
+
 const SignInView = () => {
   router.push('/signin')
 }
-
 </script>
 
 <template>
@@ -103,7 +115,20 @@ const SignInView = () => {
             </div>
           </div>
         </div>
-        <button class="signin-button" @click="SignInView()">Sign in</button>
+        <template v-if="userStore.isAuthenticated">
+          <div class="profile-dropdown">
+            <button class="profile-icon" @click="handleProfileClick">
+              <font-awesome-icon :icon="['fas', 'user']" />
+            </button>
+            <div class="dropdown-content">
+              <span>{{ userStore.currentUser?.username }}</span>
+              <button @click="handleLogout" class="dropdown-item">Logout</button>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <button class="signin-button" @click="SignInView()">Sign in</button>
+        </template>
 
         <!-- Responsive Hamburger Menu -->
         <div class="hamburger" @click="toggleMenu" :class="{ 'active': isMenuOpen }">
@@ -114,13 +139,17 @@ const SignInView = () => {
       </div>
     </nav>
 
-    <main class="main-content" :class="{ 'menu-open': isMenuOpen }">
-      <component :is="currentView === 'Home' ? Home : null" />
-      <component :is="currentView === 'About' ? About : null" />
-      <component :is="currentView === 'Product' ? Products : null" @addToCart="addToCart" />
-      <component :is="currentView === 'Facility' ? Facility : null" />
-      <component :is="currentView === 'Review' ? Review : null" />
-    </main>
+    <div class="main-content" :class="{ 'menu-open': isMenuOpen }">
+      <component 
+        :is="currentView === 'Home' ? Home : 
+            currentView === 'Product' ? Products :
+            currentView === 'About' ? About :
+            currentView === 'Facility' ? Facility :
+            currentView === 'Review' ? Review : null"
+        @showProducts="setView('Product')"
+        @add-to-cart="addToCart"
+      />
+    </div>
   </div>
 </template>
 
@@ -554,5 +583,70 @@ const SignInView = () => {
 
 .place-order:hover {
   background-color: #6b4423;
+}
+
+.profile-icon {
+  width: 40px;
+  height: 40px;
+  background-color: #8D6E63;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: none;
+  color: #FFFFFF;
+}
+
+.profile-icon:hover {
+  background-color: #3E2723;
+}
+
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: white;
+  min-width: 160px;
+  box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+  border-radius: 4px;
+  padding: 8px 0;
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.profile-dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-content span {
+  display: block;
+  padding: 8px 16px;
+  color: #5d4037;
+  font-weight: bold;
+  border-bottom: 1px solid #eee;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  color: #8b5e3c;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f5f5f5;
+  color: #3E2723;
 }
 </style>
