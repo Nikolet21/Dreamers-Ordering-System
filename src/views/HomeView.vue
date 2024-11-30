@@ -408,6 +408,68 @@ const SignInView = () => {
   margin-top: 0.5rem;
 }
 
+@media (max-width: 768px) {
+  .cart-dropdown {
+    position: absolute;
+    top: 40px;
+    right: -20px;
+    width: 280px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .cart-items {
+    max-height: calc(80vh - 120px);
+  }
+
+  .cart-item {
+    padding: 0.75rem;
+  }
+
+  .item-details h4 {
+    font-size: 1rem;
+  }
+
+  .item-details p {
+    font-size: 0.9rem;
+  }
+
+  .cart-actions {
+    padding: 0.75rem;
+    background-color: white;
+    border-top: 1px solid #eee;
+  }
+
+  .cart-total {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .clear-cart,
+  .place-order {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cart-dropdown {
+    right: -90px;
+    width: 260px;
+  }
+
+  .cart-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .remove-item {
+    align-self: flex-end;
+    margin-top: -2rem;
+  }
+}
+
 .empty-cart {
   text-align: center;
   padding: 1rem;

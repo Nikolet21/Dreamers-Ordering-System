@@ -38,7 +38,7 @@ const validatePassword = () => {
     passwordError.value =
       'Password must be at least 8 characters, include an uppercase letter, a number, and a special character'
   } else {
-    passwordError.value = '' 
+    passwordError.value = ''
   }
 }
 
@@ -90,7 +90,7 @@ const handleSubmit = () => {
       <!-- Right Section -->
       <div class="right-section">
         <div class="form-container">
-          <h2>{{ isLogin ? 'Log In' : 'Sign In' }}</h2>
+          <h2>{{ isLogin ? 'Log In' : 'Sign Up' }}</h2>
 
           <form @submit.prevent="handleSubmit" novalidate>
             <!-- Email Field -->
@@ -129,7 +129,7 @@ const handleSubmit = () => {
 
             <!-- Submit Button -->
             <button type="submit" class="submit-button">
-              {{ isLogin ? 'Log In' : 'Sign In' }}
+              {{ isLogin ? 'Log In' : 'Sign Up' }}
             </button>
 
             <!-- Toggle Form Type -->
