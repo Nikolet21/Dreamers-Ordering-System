@@ -269,10 +269,12 @@ const orders = ref([
 
 // Computed Properties
 const filteredOrders = computed(() => {
-  if (currentFilter.value === 'All') {
-    return orders.value
+  let result = orders.value
+  if (currentFilter.value !== 'All') {
+    result = result.filter(order => order.status === currentFilter.value)
   }
-  return orders.value.filter(order => order.status === currentFilter.value)
+  // Sort by orderTime in descending order (latest first)
+  return result.sort((a, b) => b.orderTime - a.orderTime)
 })
 
 const totalPages = computed(() => {

@@ -23,9 +23,9 @@ const switchComponent = (component) => {
 </script>
 
 <template>
-  <div class="management">
+  <div class="container">
     <!-- Header -->
-    <header class="header">
+    <header>
       <button class="menu-toggle" @click="toggleSidebar">
         <span></span>
         <span></span>
@@ -88,113 +88,28 @@ const switchComponent = (component) => {
 </template>
 
 <style scoped>
-.management {
-  padding: 2rem;
-  background-color: #fdf8f5;
+.container {
   min-height: 100vh;
-}
-
-.header {
-  margin-bottom: 2rem;
-}
-
-h1 {
-  color: #3E2723;
-  font-weight: 600;
-  margin-bottom: 1rem;
-}
-
-.section {
-  background-color: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
-}
-
-.section-title {
-  color: #3E2723;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #3E2723;
-  font-weight: 500;
-}
-
-input, select, textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #8D6E63;
-  border-radius: 4px;
-  font-weight: 400;
-}
-
-.button {
-  background-color: #3E2723;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.3s;
-}
-
-.button:hover {
-  background-color: #8D6E63;
-}
-
-.error {
-  color: #ef5350;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-  font-weight: 400;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-th, td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-th {
-  font-weight: 600;
-  color: #3E2723;
-  background-color: #f5f5f5;
-}
-
-td {
-  font-weight: 400;
-}
-
-.action-button {
-  background-color: transparent;
-  border: none;
-  color: #3E2723;
-  cursor: pointer;
-  padding: 0.5rem;
-  transition: color 0.3s;
-}
-
-.action-button:hover {
-  color: #8D6E63;
+  background-color: #D7CCC8;
 }
 
 /* Header Styles */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: #5D4037;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
 .menu-toggle {
   background: none;
   border: none;

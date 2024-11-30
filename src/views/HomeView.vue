@@ -22,6 +22,8 @@ const isCartOpen = ref(false)
 const isProfileOpen = ref(false)
 const isProfileModalOpen = ref(false);
 const cartItems = ref([])
+const showReceipt = ref(false)
+const currentReceipt = ref(null)
 
 const setView = (view) => (currentView.value = view)
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value)
@@ -41,7 +43,19 @@ const closeProfileModal = () => {
 };
 
 const addToCart = (item) => {
-  cartItems.value.push(item)
+  const existingItemIndex = cartItems.value.findIndex(
+    cartItem => cartItem.name === item.name && cartItem.size === item.size
+  )
+
+  if (existingItemIndex !== -1) {
+    // If item exists, update quantity and total price
+    const existingItem = cartItems.value[existingItemIndex]
+    existingItem.quantity += item.quantity
+    existingItem.totalPrice = existingItem.price * existingItem.quantity
+  } else {
+    // If item doesn't exist, add it to cart
+    cartItems.value.push(item)
+  }
 }
 
 const clearCart = () => {
@@ -50,10 +64,25 @@ const clearCart = () => {
 }
 
 const placeOrder = () => {
-  // Here you would typically send the order to your backend
-  console.log('Placing order:', cartItems.value)
-  alert('Order placed successfully!')
+  const receipt = {
+    orderDate: new Date().toLocaleString(),
+    customerName: userStore.username || 'Guest',
+    items: cartItems.value.map(item => ({
+      ...item,
+      subtotal: item.price * item.quantity
+    })),
+    total: getTotalPrice(),
+    orderNumber: Math.floor(Math.random() * 1000000).toString().padStart(6, '0')
+  }
+  
+  currentReceipt.value = receipt
+  showReceipt.value = true
   clearCart()
+}
+
+const closeReceipt = () => {
+  showReceipt.value = false
+  currentReceipt.value = null
 }
 
 const removeFromCart = (index) => {
@@ -171,6 +200,38 @@ const handleProfileUpdate = (profileData) => {
       @close="closeProfileModal"
       @update:profile="handleProfileUpdate"
     />
+    <!-- Receipt Modal -->
+    <div v-if="showReceipt" class="modal-overlay">
+      <div class="receipt-modal">
+        <div class="receipt-content">
+          <h2>Order Receipt</h2>
+          <p><strong>Order #:</strong> {{ currentReceipt.orderNumber }}</p>
+          <p><strong>Date:</strong> {{ currentReceipt.orderDate }}</p>
+          <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
+          
+          <div class="receipt-items">
+            <h3>Order Details</h3>
+            <div v-for="(item, index) in currentReceipt.items" :key="index" class="receipt-item">
+              <span class="item-name">{{ item.name }}</span>
+              <span class="item-quantity">x{{ item.quantity }}</span>
+              <span class="item-price">₱{{ item.totalPrice.toFixed(2) }}</span>
+            </div>
+          </div>
+          
+          <div class="receipt-total">
+            <strong>Total Amount:</strong>
+            <span>₱{{ currentReceipt.total.toFixed(2) }}</span>
+          </div>
+
+          <div class="pickup-notice">
+            <p><strong>Note:</strong> This order is for <span class="pickup-text">PICKUP ONLY</span></p>
+            <p>Please present this receipt when collecting your order.</p>
+          </div>
+
+          <button class="close-receipt" @click="closeReceipt">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -212,6 +273,7 @@ const handleProfileUpdate = (profileData) => {
 .logo-image {
   height: 40px;
   margin-right: 30px;
+  filter: brightness(0) invert(1);
 }
 
 .cart-icon {
@@ -329,7 +391,7 @@ const handleProfileUpdate = (profileData) => {
   display: block;
   width: 100%;
   height: 3px;
-  background-color: #333;
+  background-color: #FFFFFF;
   transition: all 0.3s ease;
 }
 
@@ -684,5 +746,107 @@ const handleProfileUpdate = (profileData) => {
 .dropdown-item:hover {
   background-color: #f5f5f5;
   color: #3E2723;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.receipt-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.receipt-content {
+  font-family: 'Poppins', sans-serif;
+}
+
+.receipt-content h2 {
+  text-align: center;
+  color: #8b5e3c;
+  margin-bottom: 20px;
+}
+
+.receipt-items {
+  margin: 20px 0;
+  border-top: 1px dashed #ccc;
+  border-bottom: 1px dashed #ccc;
+  padding: 10px 0;
+}
+
+.receipt-item {
+  display: grid;
+  grid-template-columns: 2fr 0.5fr 1fr;
+  gap: 10px;
+  margin: 8px 0;
+  align-items: center;
+}
+
+.item-name {
+  text-align: left;
+}
+
+.item-quantity {
+  text-align: center;
+}
+
+.item-price {
+  text-align: right;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+  font-size: 1.2em;
+  color: #8b5e3c;
+}
+
+.pickup-notice {
+  background-color: #fff3e0;
+  padding: 10px;
+  border-radius: 4px;
+  margin: 20px 0;
+  text-align: center;
+}
+
+.pickup-notice p {
+  margin: 5px 0;
+  color: #8b5e3c;
+}
+
+.pickup-text {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.close-receipt {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background-color: #8b5e3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.close-receipt:hover {
+  background-color: #6d4b2f;
 }
 </style>
