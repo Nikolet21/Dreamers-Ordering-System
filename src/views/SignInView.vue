@@ -22,7 +22,7 @@ const usernameError = ref('')
 const passwordError = ref('')
 const confirmPasswordError = ref('')
 
-const goBackToHome = () => {
+const goBack = () => {
   router.push('/')
 }
 
@@ -134,15 +134,17 @@ const handleSubmit = () => {
 
 <template>
   <div class="signin-container">
-    <button class="back-button" @click="goBackToHome">Back to Home</button>
+    <button class="back-button" @click="goBack">
+      <font-awesome-icon :icon="['fas', 'arrow-left']" /> Back to Home
+    </button>
 
-    <div class="signin-content">
+    <div class="content-wrapper">
       <!-- Left Section -->
       <div class="left-section">
         <img src="../assets/coffeelogo.png" alt="Coffee Logo" class="large-logo" />
         <div class="description">
-          <h2>Welcome to Dreamers Coffee</h2>
-          <p>Join us in experiencing the finest coffee selections and exclusive member benefits.</p>
+          <h2>Welcome to Dreamers</h2>
+          <p>Experience the perfect blend of artisanal coffee and exceptional service.</p>
         </div>
       </div>
 
@@ -238,112 +240,125 @@ const handleSubmit = () => {
 
 <style scoped>
 .signin-container {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background-color: #fdf8f5;
+  background-color: #3E2723;
   position: relative;
-  padding: 20px;
+  padding: 2rem;
 }
 
 .back-button {
-  background-color: #8b5e3c;
-  color: white;
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: white;
   border: none;
-  padding: 1rem 2.5rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 30px;
+  border-radius: 4px;
+  color: #3E2723;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 6px rgba(139, 94, 60, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .back-button:hover {
-  background-color: #6b4423;
+  background-color: #f5f5f5;
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(139, 94, 60, 0.3);
 }
 
-.signin-content {
+.content-wrapper {
   display: flex;
-  max-width: 1200px;
-  margin: 0 auto;
-  gap: 40px;
-  min-height: calc(100vh - 100px);
+  justify-content: center;
   align-items: center;
+  gap: 6rem;
+  margin-top: 4rem;
+  padding: 0 2rem;
+  min-height: calc(100vh - 8rem);
 }
 
 .left-section {
   flex: 1;
+  max-width: 500px;
+  padding: 2rem;
+  position: fixed;
+  left: 8rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 20px;
+  align-items: flex-start;
 }
 
 .large-logo {
   width: 200px;
   height: auto;
-  margin-bottom: 30px;
+  margin-bottom: 2rem;
+  filter: brightness(0) invert(1);
 }
 
 .description {
-  color: #5d4037;
+  color: white;
+  max-width: 400px;
 }
 
 .description h2 {
-  margin-bottom: 15px;
-  font-size: 1.8rem;
+  color: white;
+  margin-bottom: 1.5rem;
+  font-size: 2.5rem;
+  font-weight: 600;
 }
 
 .description p {
-  font-size: 1.1rem;
-  line-height: 1.6;
+  color: white;
+  line-height: 1.8;
+  font-size: 1.2rem;
+  font-weight: 400;
 }
 
 .right-section {
   flex: 1;
-  padding: 20px;
+  max-width: 500px;
+  display: flex;
+  justify-content: flex-end;
+  margin-left: calc(500px + 6rem);
 }
 
 .form-container {
-  background: white;
-  padding: 40px;
+  background-color: white;
+  padding: 2rem;
   border-radius: 10px;
+  width: 100%;
+  max-width: 600px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-width: 400px;
-  margin: 0 auto;
 }
 
 .form-container h2 {
-  color: #5d4037;
-  margin-bottom: 30px;
   text-align: center;
+  color: #3E2723;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 1rem;
 }
 
 label {
   display: block;
-  margin-bottom: 8px;
-  color: #5d4037;
+  margin-bottom: 0.5rem;
+  color: #3E2723;
   font-weight: 500;
 }
 
 input {
-  width: 95%;
-  padding: 12px;
-  border: 1px solid #d7ccc8;
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #8D6E63;
   border-radius: 4px;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
-}
-
-input:focus {
-  outline: none;
-  border-color: #8d6e63;
+  font-weight: 400;
 }
 
 input.error {
@@ -379,8 +394,8 @@ input.error {
 .error-message {
   color: #ef5350;
   font-size: 0.875rem;
-  margin-top: 5px;
-  display: block;
+  margin-top: 0.25rem;
+  font-weight: 400;
 }
 
 .forgot-password {
@@ -390,32 +405,33 @@ input.error {
   text-decoration: none;
   margin-bottom: 20px;
   font-size: 0.9rem;
+  font-weight: 400;
 }
 
 .submit-button {
   width: 100%;
-  padding: 12px;
-  background-color: #8d6e63;
+  padding: 0.75rem;
+  background-color: #3E2723;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  font-weight: 500;
+  transition: background-color 0.3s;
 }
 
 .submit-button:hover {
-  background-color: #5d4037;
+  background-color: #8D6E63;
 }
 
 .toggle-form {
   text-align: center;
-  margin-top: 20px;
-  color: #5d4037;
+  margin-top: 1rem;
+  font-weight: 400;
 }
 
 .toggle-form a {
-  color: #8d6e63;
+  color: #3E2723;
   text-decoration: none;
   font-weight: 500;
 }
@@ -425,45 +441,77 @@ input.error {
 }
 
 /* Responsive Design */
-@media (max-width: 968px) {
-  .signin-content {
-    flex-direction: column;
-    padding-top: 80px;
+@media (max-width: 1200px) {
+  .left-section {
+    position: static;
+    align-items: center;
+    text-align: center;
   }
 
-  .left-section {
-    padding-bottom: 0;
+  .right-section {
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  .content-wrapper {
+    flex-direction: column;
+    gap: 3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .left-section, .right-section {
+    max-width: 100%;
   }
 
   .large-logo {
     width: 150px;
   }
 
+  .description {
+    text-align: center;
+    margin: 0 auto;
+  }
+
   .description h2 {
-    font-size: 1.5rem;
+    font-size: 2rem;
   }
 
   .description p {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 }
 
 @media (max-width: 480px) {
   .signin-container {
-    padding: 10px;
-  }
-
-  .form-container {
-    padding: 20px;
+    padding: 1rem;
   }
 
   .back-button {
-    top: 10px;
-    right: 10px;
+    top: 1rem;
+    left: 1rem;
+    padding: 0.5rem 1rem;
   }
 
-  .description {
-    padding: 0 20px;
+  .content-wrapper {
+    margin-top: 5rem;
+    padding: 0 1rem;
+  }
+
+  .form-container {
+    padding: 2rem;
+  }
+
+  .large-logo {
+    width: 120px;
+  }
+
+  .description h2 {
+    font-size: 1.8rem;
+  }
+
+  .description p {
+    font-size: 1rem;
   }
 }
 </style>

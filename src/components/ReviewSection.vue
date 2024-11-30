@@ -113,6 +113,7 @@ const submitContact = () => {
   margin: 0 auto;
   padding: 2rem;
   font-family: Arial, sans-serif;
+  margin-top: 2rem;
 }
 
 .review-sections {
@@ -181,7 +182,7 @@ h2 {
 }
 
 .feedback-textarea {
-  width: 95%;
+  width: 100%;
   height: 150px;
   padding: 0.8rem;
   margin-bottom: 1rem;

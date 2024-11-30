@@ -48,6 +48,7 @@ const handleOrderClick = () => {
   display: flex;
   align-items: center;
   padding: 2rem;
+  margin-top: 3rem;
 }
 
 .home-container {

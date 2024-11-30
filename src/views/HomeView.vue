@@ -84,7 +84,7 @@ const handleProfileUpdate = (profileData) => {
     <nav class="navbar">
       <div class="logo">
         <img src="../assets/coffeelogo.png" alt="Coffee Logo" class="logo-image" />
-        <span>Dreamers</span>
+        <span style="color: white;">Dreamers</span>
       </div>
 
       <!-- Navigation Links -->
@@ -100,7 +100,7 @@ const handleProfileUpdate = (profileData) => {
       <div class="right-buttons">
         <div class="cart-container">
           <button @click="toggleCart" class="icon-button">
-            <font-awesome-icon :icon="['fas', 'cart-shopping']" />
+            <font-awesome-icon :icon="['fas', 'cart-shopping']" style="color: white;" />
             <span v-if="cartItems.length" class="cart-badge">{{ cartItems.length }}</span>
           </button>
 
@@ -180,33 +180,43 @@ const handleProfileUpdate = (profileData) => {
   background: #fdf8f5;
   min-height: 100vh;
   padding-top: 60px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .navbar {
   position: fixed;
   top: 0;
-  right: 0;
   left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 20px;
-  background-color: #fff;
+  padding: 20px 20px;
+  background-color: #3E2723;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  height: 60px;
+  height: 90px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  font-weight: bold;
+  font-weight: 600;
   z-index: 1001;
-}
+  font-family: 'Poppins', sans-serif;
+  color: white;
 
+
+}
 .logo-image {
   height: 40px;
   margin-right: 30px;
+}
+
+.cart-icon {
+  color: white;
+  font-size: 1.5rem;
 }
 
 .nav-links {
@@ -217,6 +227,7 @@ const handleProfileUpdate = (profileData) => {
   padding: 0;
   align-items: center;
   height: 100%;
+  font-family: 'Poppins', sans-serif;
 }
 
 .nav-links li {
@@ -228,12 +239,13 @@ const handleProfileUpdate = (profileData) => {
 
 .nav-links a {
   text-decoration: none;
-  color: #333;
-  font-weight: 600;
+  color: white;
+  font-weight: 500;
   font-size: 1.05rem;
   transition: color 0.3s ease;
   padding: 5px 0;
   position: relative;
+  font-family: 'Poppins', sans-serif;
 }
 
 .nav-links a::after {
@@ -264,6 +276,7 @@ const handleProfileUpdate = (profileData) => {
   display: flex;
   align-items: center;
   gap: 15px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .icon-button {
@@ -273,6 +286,7 @@ const handleProfileUpdate = (profileData) => {
   cursor: pointer;
   padding: 0;
   transition: transform 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
 
 .icon-button:hover {
@@ -290,6 +304,7 @@ const handleProfileUpdate = (profileData) => {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 6px rgba(139, 94, 60, 0.2);
+  font-family: 'Poppins', sans-serif;
 }
 
 .signin-button:hover {
@@ -623,6 +638,7 @@ const handleProfileUpdate = (profileData) => {
   transition: background-color 0.3s ease;
   border: none;
   color: #FFFFFF;
+  font-family: 'Poppins', sans-serif;
 }
 
 .profile-icon:hover {
@@ -640,6 +656,7 @@ const handleProfileUpdate = (profileData) => {
   padding: 8px 0;
   z-index: 1000;
   margin-top: 5px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .dropdown-content span {
@@ -661,6 +678,7 @@ const handleProfileUpdate = (profileData) => {
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
 
 .dropdown-item:hover {
