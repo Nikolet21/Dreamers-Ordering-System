@@ -2,18 +2,31 @@
   <div class="orders-container">
     <!-- Filter Section -->
     <div class="filter-section">
-      <button
-        v-for="status in orderStatuses"
-        :key="status"
-        :class="['filter-btn', { active: currentFilter === status }]"
-        @click="setFilter(status)"
-      >
-        {{ status }}
-      </button>
+      <div class="status-filters">
+        <button
+          v-for="status in orderStatuses"
+          :key="status"
+          :class="['filter-btn', { active: currentFilter === status }]"
+          @click="setFilter(status)"
+        >
+          {{ status }}
+        </button>
+      </div>
+      <div class="search-container">
+        <div class="search-bar">
+          <font-awesome-icon :icon="['fas', 'search']" class="search-icon" />
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="Search customer name..."
+            class="search-input"
+          >
+        </div>
+      </div>
     </div>
 
     <!-- Orders Grid -->
-    <div class="orders-grid">
+    <div v-if="paginatedOrders.length" class="orders-grid">
       <div v-for="order in paginatedOrders" :key="order.id" class="order-card">
         <div class="order-header">
           <h3>Order #{{ order.id }}</h3>
@@ -26,29 +39,42 @@
         <div class="products-section">
           <h4>Ordered Items:</h4>
           <div class="products-list">
-            <div v-for="product in order.products" :key="product.id" class="product-item">
+            <div v-for="(product, index) in displayedProducts(order)" :key="product.id" class="product-item">
               <img :src="product.image" :alt="product.name">
               <div class="product-details">
                 <span>{{ product.name }}</span>
                 <small>Qty: {{ product.quantity }}</small>
               </div>
             </div>
+            <div v-if="order.products.length > 2" class="more-items" @click="viewReceipt(order)">
+              + {{ order.products.length - 2 }} more items...
+            </div>
           </div>
         </div>
         <div class="action-buttons">
+          <button class="view-btn" @click="viewReceipt(order)">
+            <font-awesome-icon :icon="['fas', 'eye']" />
+            View
+          </button>
           <button class="edit-btn" @click="editStatus(order)">
             <font-awesome-icon :icon="['fas', 'edit']" />
-            Edit Status
+            Edit
           </button>
           <button
             class="complete-btn"
             @click="completeOrder(order)"
             :disabled="order.status === 'Completed'"
           >
-            Complete
+            <font-awesome-icon :icon="['fas', 'check']" />
+            Done
           </button>
         </div>
       </div>
+    </div>
+    <div v-else class="no-results">
+      <font-awesome-icon :icon="['fas', 'user-slash']" class="no-results-icon" />
+      <p>No Customer Found</p>
+      <small v-if="searchQuery">Try a different search term</small>
     </div>
 
     <!-- Pagination -->
@@ -79,7 +105,7 @@
         <h2>Edit Order Status</h2>
         <div class="form-group">
           <label>Status</label>
-          <select 
+          <select
             v-model="editingOrder.status"
             :class="{ 'error': errors.status }"
           >
@@ -97,11 +123,50 @@
         </div>
       </div>
     </div>
+
+    <!-- Receipt Modal -->
+    <div v-if="showReceipt" class="modal-overlay">
+      <div class="receipt-modal">
+        <div class="receipt-content">
+          <h2>Order Receipt</h2>
+          <p><strong>Order #:</strong> {{ currentReceipt.id }}</p>
+          <p><strong>Date:</strong> {{ formatTime(currentReceipt.orderTime) }}</p>
+          <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
+
+          <div class="receipt-items">
+            <h3>Order Details</h3>
+            <div v-for="product in currentReceipt.products" :key="product.id" class="receipt-item">
+              <div class="item-details">
+                <span class="item-name">{{ product.name }}</span>
+                <div class="item-info">
+                  <span class="item-quantity">Quantity: {{ product.quantity }}</span>
+                  <span class="item-price">₱{{ (product.price * product.quantity).toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="receipt-total">
+            <strong>Total Amount:</strong>
+            <span>₱{{ calculateTotal(currentReceipt.products).toFixed(2) }}</span>
+          </div>
+
+          <p class="thank-you">Thank you for choosing Dreamers!</p>
+
+          <button class="close-receipt" @click="closeReceipt">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { faEye, faEdit, faCheck, faTrash, faSearch, faUserSlash } from '@fortawesome/free-solid-svg-icons'
+
+library.add(faEye, faEdit, faCheck, faTrash, faSearch, faUserSlash)
 
 // Constants
 const ITEMS_PER_PAGE = 8
@@ -110,6 +175,7 @@ const orderStatuses = ['All', 'Pending', 'Processing', 'Completed', 'Cancelled']
 // State
 const currentFilter = ref('All')
 const currentPage = ref(1)
+const searchQuery = ref('')
 const showEditModal = ref(false)
 const editingOrder = ref({
   id: null,
@@ -118,26 +184,42 @@ const editingOrder = ref({
 const errors = ref({
   status: ''
 })
+const showReceipt = ref(false)
+const currentReceipt = ref({
+  id: null,
+  orderTime: null,
+  customerName: '',
+  products: []
+})
 
 // Mock Data
 const orders = ref([
   {
-    id: '1001',
-    customerName: 'John Doe',
-    orderTime: new Date('2024-02-20T10:30:00'),
-    status: 'Pending',
+    id: '1003',
+    customerName: 'Michael Johnson',
+    orderTime: new Date('2024-02-20T13:15:00'),
+    status: 'Completed',
     products: [
       {
-        id: 1,
-        name: 'Cappuccino',
+        id: 6,
+        name: 'Hot Dark Chocolate',
         quantity: 2,
-        image: 'https://example.com/cappuccino.jpg'
+        image: 'src/assets/hotchoco.jpg',
+        price: 37.00
+      },
+      {
+        id: 1,
+        name: 'Milky Strawberry',
+        quantity: 1,
+        image: 'src/assets/milkstrawberry.jpg',
+        price: 37.00
       },
       {
         id: 2,
-        name: 'Chocolate Croissant',
+        name: 'Dream Latte',
         quantity: 1,
-        image: 'https://example.com/croissant.jpg'
+        image: 'src/assets/vanillalatte.jpg',
+        price: 37.00
       }
     ]
   },
@@ -148,156 +230,47 @@ const orders = ref([
     status: 'Processing',
     products: [
       {
-        id: 3,
-        name: 'Latte',
-        quantity: 1,
-        image: 'https://example.com/latte.jpg'
-      },
-      {
         id: 4,
-        name: 'Mocha',
+        name: 'Dark Chocolate',
         quantity: 2,
-        image: 'https://example.com/mocha.jpg'
-      }
-    ]
-  },
-  {
-    id: '1003',
-    customerName: 'Michael Johnson',
-    orderTime: new Date('2024-02-20T13:15:00'),
-    status: 'Completed',
-    products: [
+        image: 'src/assets/darkchoco.jpg',
+        price: 37.00
+      },
       {
         id: 5,
-        name: 'Espresso',
-        quantity: 3,
-        image: 'https://example.com/espresso.jpg'
-      },
-      {
-        id: 6,
-        name: 'Americano',
+        name: 'Dreamy Yogurt',
         quantity: 1,
-        image: 'https://example.com/americano.jpg'
+        image: 'src/assets/yogurt.jpg',
+        price: 37.00
       }
     ]
   },
   {
-    id: '1004',
-    customerName: 'Emily Davis',
-    orderTime: new Date('2024-02-20T15:30:00'),
-    status: 'Cancelled',
-    products: [
-      {
-        id: 7,
-        name: 'Cafe au Lait',
-        quantity: 2,
-        image: 'https://example.com/cafeau.jpg'
-      },
-      {
-        id: 8,
-        name: 'Flat White',
-        quantity: 1,
-        image: 'https://example.com/flatwhite.jpg'
-      }
-    ]
-  },
-  {
-    id: '1005',
-    customerName: 'David Wilson',
-    orderTime: new Date('2024-02-20T17:45:00'),
+    id: '1001',
+    customerName: 'John Doe',
+    orderTime: new Date('2024-02-20T10:30:00'),
     status: 'Pending',
     products: [
       {
-        id: 9,
-        name: 'Macchiato',
-        quantity: 1,
-        image: 'https://example.com/macchiato.jpg'
-      },
-      {
-        id: 10,
-        name: 'Affogato',
+        id: 1,
+        name: 'Milky Strawberry',
         quantity: 2,
-        image: 'https://example.com/affogato.jpg'
-      }
-    ]
-  },
-  {
-    id: '1006',
-    customerName: 'Sarah Anderson',
-    orderTime: new Date('2024-02-20T19:00:00'),
-    status: 'Processing',
-    products: [
-      {
-        id: 11,
-        name: 'Flat White',
-        quantity: 2,
-        image: 'https://example.com/flatwhite.jpg'
+        image: 'src/assets/milkstrawberry.jpg',
+        price: 37.00
       },
       {
-        id: 12,
-        name: 'Cafe au Lait',
+        id: 2,
+        name: 'Dream Latte',
         quantity: 1,
-        image: 'https://example.com/cafeau.jpg'
-      }
-    ]
-  },
-  {
-    id: '1007',
-    customerName: 'Robert Thompson',
-    orderTime: new Date('2024-02-20T20:15:00'),
-    status: 'Completed',
-    products: [
-      {
-        id: 13,
-        name: 'Espresso',
-        quantity: 3,
-        image: 'https://example.com/espresso.jpg'
+        image: 'src/assets/vanillalatte.jpg',
+        price: 37.00
       },
       {
-        id: 14,
-        name: 'Americano',
+        id: 3,
+        name: 'Caramel Macchiato',
         quantity: 1,
-        image: 'https://example.com/americano.jpg'
-      }
-    ]
-  },
-  {
-    id: '1008',
-    customerName: 'Laura Martinez',
-    orderTime: new Date('2024-02-20T22:30:00'),
-    status: 'Cancelled',
-    products: [
-      {
-        id: 15,
-        name: 'Cafe au Lait',
-        quantity: 2,
-        image: 'https://example.com/cafeau.jpg'
-      },
-      {
-        id: 16,
-        name: 'Flat White',
-        quantity: 1,
-        image: 'https://example.com/flatwhite.jpg'
-      }
-    ]
-  },
-  {
-    id: '1009',
-    customerName: 'Daniel Rodriguez',
-    orderTime: new Date('2024-02-20T23:45:00'),
-    status: 'Pending',
-    products: [
-      {
-        id: 17,
-        name: 'Macchiato',
-        quantity: 1,
-        image: 'https://example.com/macchiato.jpg'
-      },
-      {
-        id: 18,
-        name: 'Affogato',
-        quantity: 2,
-        image: 'https://example.com/affogato.jpg'
+        image: 'src/assets/caramel.jpg',
+        price: 37.00
       }
     ]
   }
@@ -305,12 +278,23 @@ const orders = ref([
 
 // Computed Properties
 const filteredOrders = computed(() => {
-  let result = orders.value
+  let filtered = orders.value
+
+  // Filter by status
   if (currentFilter.value !== 'All') {
-    result = result.filter(order => order.status === currentFilter.value)
+    filtered = filtered.filter(order => order.status === currentFilter.value)
   }
-  // Sort by orderTime in descending order (latest first)
-  return result.sort((a, b) => b.orderTime - a.orderTime)
+
+  // Filter by customer name
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    filtered = filtered.filter(order =>
+      order.customerName.toLowerCase().includes(query)
+    )
+  }
+
+  // Sort by date (newest first)
+  return filtered.sort((a, b) => b.orderTime - a.orderTime)
 })
 
 const totalPages = computed(() => {
@@ -331,11 +315,11 @@ const displayedPageNumbers = computed(() => {
   let pages = []
   // Always show first page
   pages.push(1)
-  
+
   // Calculate middle pages
   let middleStart = Math.max(2, currentPage.value - 1)
   let middleEnd = Math.min(totalPages.value - 1, currentPage.value + 1)
-  
+
   // Adjust if at the start
   if (currentPage.value <= 3) {
     middleStart = 2
@@ -351,12 +335,16 @@ const displayedPageNumbers = computed(() => {
   for (let i = middleStart; i <= middleEnd; i++) {
     pages.push(i)
   }
-  
+
   // Always show last page
   pages.push(totalPages.value)
-  
+
   return pages
 })
+
+const displayedProducts = (order) => {
+  return order.products.slice(0, 2)
+}
 
 // Methods
 const setFilter = (status) => {
@@ -423,6 +411,25 @@ const completeOrder = (order) => {
   // Update order status to completed
   order.status = 'Completed'
 }
+
+const viewReceipt = (order) => {
+  currentReceipt.value = { ...order }
+  showReceipt.value = true
+}
+
+const closeReceipt = () => {
+  showReceipt.value = false
+  currentReceipt.value = {
+    id: null,
+    orderTime: null,
+    customerName: '',
+    products: []
+  }
+}
+
+const calculateTotal = (products) => {
+  return products.reduce((total, product) => total + (product.price * product.quantity), 0)
+}
 </script>
 
 <style scoped>
@@ -434,9 +441,15 @@ const completeOrder = (order) => {
 /* Filter Section Styles */
 .filter-section {
   display: flex;
-  gap: 15px;
-  margin-bottom: 30px;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.status-filters {
+  display: flex;
+  gap: 10px;
 }
 
 .filter-btn {
@@ -457,6 +470,43 @@ const completeOrder = (order) => {
   background-color: #3E2723;
 }
 
+.search-container {
+  min-width: 250px;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  color: #8D6E63;
+  font-size: 0.9rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 10px 8px 35px;
+  border: 1px solid #D7CCC8;
+  border-radius: 5px;
+  font-size: 0.9rem;
+  color: #5D4037;
+  background-color: white;
+  transition: border-color 0.3s ease;
+}
+
+.search-input::placeholder {
+  color: #BCAAA4;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #8D6E63;
+}
+
 /* Orders Grid Styles */
 .orders-grid {
   display: grid;
@@ -466,10 +516,15 @@ const completeOrder = (order) => {
 }
 
 .order-card {
-  background-color: white;
+  background: white;
   border-radius: 8px;
   padding: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  min-height: 350px;
 }
 
 .order-header {
@@ -520,7 +575,9 @@ const completeOrder = (order) => {
 }
 
 .products-section {
-  margin-bottom: 15px;
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 50px;
 }
 
 .products-section h4 {
@@ -528,19 +585,13 @@ const completeOrder = (order) => {
   margin-bottom: 10px;
 }
 
-.products-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .product-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 5px;
-  background-color: #F5F5F5;
-  border-radius: 5px;
+  padding: 8px;
+  border-radius: 4px;
+  background-color: #f5f5f5;
 }
 
 .product-item img {
@@ -553,6 +604,7 @@ const completeOrder = (order) => {
 .product-details {
   display: flex;
   flex-direction: column;
+  flex-grow: 1;
 }
 
 .product-details span {
@@ -565,17 +617,42 @@ const completeOrder = (order) => {
 }
 
 .action-buttons {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
   display: flex;
-  gap: 10px;
-  margin-top: 15px;
+  gap: 6px;
+  background: white;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
 }
 
-.edit-btn, .complete-btn {
-  padding: 8px 15px;
+.view-btn, .edit-btn, .complete-btn {
+  flex: 1;
+  padding: 6px 10px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.85rem;
   transition: background-color 0.3s ease;
+}
+
+.view-btn svg, .edit-btn svg, .complete-btn svg {
+  font-size: 0.9rem;
+}
+
+.view-btn {
+  background-color: #8D6E63;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: #6D4C41;
 }
 
 .edit-btn {
@@ -759,10 +836,188 @@ const completeOrder = (order) => {
   box-shadow: none;
 }
 
+.receipt-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.receipt-content {
+  font-family: 'Poppins', sans-serif;
+}
+
+.receipt-content h2 {
+  text-align: center;
+  color: #8b5e3c;
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid #8b5e3c;
+  padding-bottom: 0.5rem;
+}
+
+.receipt-content p {
+  margin: 10px 0;
+  color: #5d4037;
+}
+
+.receipt-items {
+  margin: 20px 0;
+  border-top: 1px dashed #ccc;
+  border-bottom: 1px dashed #ccc;
+  padding: 15px 0;
+}
+
+.receipt-items h3 {
+  color: #8b5e3c;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.receipt-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.receipt-item:last-child {
+  border-bottom: none;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #5d4037;
+}
+
+.item-info {
+  display: flex;
+  justify-content: space-between;
+  color: #8d6e63;
+  font-size: 0.9rem;
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+  padding: 15px 0;
+  border-top: 2px solid #8b5e3c;
+  color: #5d4037;
+  font-size: 1.2rem;
+}
+
+.thank-you {
+  text-align: center;
+  color: #8b5e3c;
+  margin: 20px 0;
+  font-style: italic;
+}
+
+.close-receipt {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  background-color: #8b5e3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.close-receipt:hover {
+  background-color: #6d4c41;
+}
+
+.no-results {
+  margin: 40px auto;
+  text-align: center;
+  padding: 40px;
+  background-color: #FFF;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+}
+
+.no-results-icon {
+  font-size: 3rem;
+  color: #BCAAA4;
+  margin-bottom: 15px;
+}
+
+.no-results p {
+  color: #5D4037;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.no-results small {
+  color: #8D6E63;
+  font-size: 0.9rem;
+}
+
+.more-items {
+  color: #8b5e3c;
+  font-size: 0.9rem;
+  margin-top: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  text-align: right;
+  font-style: italic;
+}
+
+.more-items:hover {
+  color: #6d4c41;
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .receipt-modal {
+    width: 95%;
+    padding: 15px;
+  }
+
+  .receipt-content {
+    padding: 10px;
+  }
+
+  .receipt-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .item-info {
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .filter-section {
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .status-filters {
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+
+  .search-container {
+    min-width: 100%;
   }
 
   .orders-grid {
