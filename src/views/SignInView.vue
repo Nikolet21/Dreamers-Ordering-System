@@ -1,6 +1,11 @@
 <script setup>
 import router from '@/router'
 import { ref } from 'vue'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+library.add(faEye, faEyeSlash)
 
 const mockAccounts = [
   { email: 'test@gmail.com', password: 'Password123!' },
@@ -9,10 +14,15 @@ const mockAccounts = [
 
 const isLogin = ref(false)
 const email = ref('')
+const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
 const emailError = ref('')
+const usernameError = ref('')
 const passwordError = ref('')
+const confirmPasswordError = ref('')
 
 const goBackToHome = () => {
   router.push('/')
@@ -29,6 +39,16 @@ const validateEmail = () => {
   }
 }
 
+const validateUsername = () => {
+  if (!username.value) {
+    usernameError.value = 'Username is required'
+  } else if (username.value.length < 3) {
+    usernameError.value = 'Username must be at least 3 characters long'
+  } else {
+    usernameError.value = ''
+  }
+}
+
 const validatePassword = () => {
   const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z]).{8,}$/
 
@@ -42,32 +62,66 @@ const validatePassword = () => {
   }
 }
 
+const validateConfirmPassword = () => {
+  if (!confirmPassword.value) {
+    confirmPasswordError.value = 'Please confirm your password'
+  } else if (confirmPassword.value !== password.value) {
+    confirmPasswordError.value = 'Passwords do not match'
+  } else {
+    confirmPasswordError.value = ''
+  }
+}
+
 const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
+}
+
+const toggleConfirmPasswordVisibility = () => {
+  showConfirmPassword.value = !showConfirmPassword.value
 }
 
 const toggleForm = () => {
   isLogin.value = !isLogin.value
   email.value = ''
+  username.value = ''
   password.value = ''
+  confirmPassword.value = ''
   emailError.value = ''
+  usernameError.value = ''
   passwordError.value = ''
+  confirmPasswordError.value = ''
 }
 
 const handleSubmit = () => {
   validateEmail()
+  if (!isLogin.value) {
+    validateUsername()
+    validateConfirmPassword()
+  }
   validatePassword()
 
-  if (!emailError.value && !passwordError.value) {
-    const account = mockAccounts.find(
-      (acc) => acc.email === email.value && acc.password === password.value,
-    )
+  if (!emailError.value && !passwordError.value && 
+      (isLogin.value || (!usernameError.value && !confirmPasswordError.value))) {
+    if (isLogin.value) {
+      const account = mockAccounts.find(
+        (acc) => acc.email === email.value && acc.password === password.value,
+      )
 
-    if (account) {
-      console.log('Login successful:', account)
-      router.push('/')
+      if (account) {
+        console.log('Login successful:', account)
+        router.push('/')
+      } else {
+        alert('Invalid email or password.')
+      }
     } else {
-      alert('Invalid email or password.')
+      // Handle sign up logic here
+      console.log('Sign up data:', {
+        email: email.value,
+        username: username.value,
+        password: password.value
+      })
+      alert('Sign up successful!')
+      router.push('/')
     }
   }
 }
@@ -106,6 +160,19 @@ const handleSubmit = () => {
               <span class="error-message" v-if="emailError">{{ emailError }}</span>
             </div>
 
+            <!-- Username Field (Sign Up only) -->
+            <div class="form-group" v-if="!isLogin">
+              <label for="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                v-model="username"
+                @input="validateUsername"
+                :class="{ error: usernameError }"
+              />
+              <span class="error-message" v-if="usernameError">{{ usernameError }}</span>
+            </div>
+
             <!-- Password Field -->
             <div class="form-group">
               <label for="password">Password</label>
@@ -118,10 +185,28 @@ const handleSubmit = () => {
                   :class="{ error: passwordError }"
                 />
                 <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
-                  {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+                  <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
                 </button>
               </div>
               <span class="error-message" v-if="passwordError">{{ passwordError }}</span>
+            </div>
+
+            <!-- Confirm Password Field (Sign Up only) -->
+            <div class="form-group" v-if="!isLogin">
+              <label for="confirmPassword">Confirm Password</label>
+              <div class="password-input">
+                <input
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  id="confirmPassword"
+                  v-model="confirmPassword"
+                  @input="validateConfirmPassword"
+                  :class="{ error: confirmPasswordError }"
+                />
+                <button type="button" class="visibility-toggle" @click="toggleConfirmPasswordVisibility">
+                  <font-awesome-icon :icon="showConfirmPassword ? 'eye-slash' : 'eye'" />
+                </button>
+              </div>
+              <span class="error-message" v-if="confirmPasswordError">{{ confirmPasswordError }}</span>
             </div>
 
             <!-- Forgot Password Link -->
@@ -273,6 +358,17 @@ input.error {
   border: none;
   cursor: pointer;
   padding: 0;
+  color: #8d6e63;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.visibility-toggle:hover {
+  color: #5d4037;
 }
 
 .error-message {
