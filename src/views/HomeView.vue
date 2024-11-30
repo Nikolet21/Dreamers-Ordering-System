@@ -1,6 +1,11 @@
 <script setup>
 import router from '@/router';
 import { defineAsyncComponent, ref } from 'vue'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+
+import { faCartShopping} from '@fortawesome/free-solid-svg-icons'
+library.add(faCartShopping)
 const Products = defineAsyncComponent(() => import('../components/ProductSection.vue'))
 const Home = defineAsyncComponent(() => import('../components/HomeSection.vue'))
 const About = defineAsyncComponent(() => import('../components/AboutSection.vue'))
@@ -16,40 +21,52 @@ const closeMenu = () => (isMenuOpen.value = false)
 const SignInView = () => {
   router.push('/signin')
 }
+
+const addToCart = () => {
+  console.log('add to cart')
+}
+
 </script>
 
 <template>
-  <nav class="navbar">
-    <div class="logo">
-      <img src="../assets/coffeelogo.png" alt="Coffee Logo" class="logo-image" />
-      <span>Dreamers</span>
-    </div>
+  <div class="app-container">
+    <nav class="navbar">
+      <div class="logo">
+        <img src="../assets/coffeelogo.png" alt="Coffee Logo" class="logo-image" />
+        <span>Dreamers</span>
+      </div>
 
-    <!-- Hamburger Menu Button -->
-    <div class="hamburger" @click="toggleMenu" :class="{ 'active': isMenuOpen }">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
+      <!-- Navigation Links -->
+      <ul class="nav-links" :class="{ 'active': isMenuOpen }">
+        <li><a href="#" @click="setView('Home'); closeMenu()" :class="{ 'selected': currentView === 'Home' }">Home</a></li>
+        <li><a href="#" @click="setView('About'); closeMenu()" :class="{ 'selected': currentView === 'About' }">About</a></li>
+        <li><a href="#" @click="setView('Product'); closeMenu()" :class="{ 'selected': currentView === 'Product' }">Products</a></li>
+        <li><a href="#" @click="setView('Facility'); closeMenu()" :class="{ 'selected': currentView === 'Facility' }">Facility</a></li>
+        <li><a href="#" @click="setView('Review'); closeMenu()" :class="{ 'selected': currentView === 'Review' }">Review</a></li>
+      </ul>
 
-    <!-- Navigation Links -->
-    <ul class="nav-links" :class="{ 'active': isMenuOpen }">
-      <a href="#" @click="setView('Home'); closeMenu()">Home</a>
-      <a href="#" @click="setView('About'); closeMenu()">About</a>
-      <a href="#" @click="setView('Product'); closeMenu()">Products</a>
-      <a href="#" @click="setView('Facility'); closeMenu()">Facility</a>
-      <a href="#" @click="setView('Review'); closeMenu()">Review</a>
-    </ul>
-    <button class="signin-button" @click="SignInView()">Sign in</button>
-  </nav>
+      <!-- Right Buttons -->
+      <div class="right-buttons">
+        <button @click="addToCart()" class="icon-button">
+          <font-awesome-icon :icon="['fas', 'cart-shopping']" />
+        </button>
+        <button class="signin-button" @click="SignInView()">Sign in</button>
+        <div class="hamburger" @click="toggleMenu" :class="{ 'active': isMenuOpen }">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </nav>
 
-  <main class="main-content" :class="{ 'menu-open': isMenuOpen }">
-    <component :is="currentView === 'Home' ? Home : null" />
-    <component :is="currentView === 'About' ? About : null" />
-    <component :is="currentView === 'Product' ? Products : null" />
-    <component :is="currentView === 'Facility' ? Facility : null" />
-    <component :is="currentView === 'Review' ? Review : null" />
-  </main>
+    <main class="main-content" :class="{ 'menu-open': isMenuOpen }">
+      <component :is="currentView === 'Home' ? Home : null" />
+      <component :is="currentView === 'About' ? About : null" />
+      <component :is="currentView === 'Product' ? Products : null" />
+      <component :is="currentView === 'Facility' ? Facility : null" />
+      <component :is="currentView === 'Review' ? Review : null" />
+    </main>
+  </div>
 </template>
 
 <style scoped>
@@ -57,7 +74,7 @@ const SignInView = () => {
   transition: margin-left 0.3s ease;
   background: #fdf8f5;
   min-height: 100vh;
-  padding-top: 60px; /* Height of navbar */
+  padding-top: 60px;
 }
 
 .navbar {
@@ -93,32 +110,87 @@ const SignInView = () => {
   gap: 80px;
   margin: 0;
   padding: 0;
+  align-items: center;
+  height: 100%;
+}
+
+.nav-links li {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .nav-links a {
   text-decoration: none;
   color: #333;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 1.05rem;
   transition: color 0.3s ease;
+  padding: 5px 0;
+  position: relative;
 }
 
-.nav-links a:hover {
-  color: #c9a67c;
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: #8b5e3c;
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.nav-links a:hover::after {
+  transform: scaleX(1);
+}
+
+.nav-links a.selected {
+  color: #8b5e3c;
+}
+
+.nav-links a.selected::after {
+  transform: scaleX(1);
+}
+
+.right-buttons {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.icon-button {
+  font-size: 1.5rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.2s ease;
+}
+
+.icon-button:hover {
+  transform: scale(1.2);
 }
 
 .signin-button {
-  background-color: #c9a67c;
+  background-color: #8b5e3c;
   color: white;
   border: none;
-  padding: 8px 15px;
-  border-radius: 5px;
+  padding: 0.5rem 1.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 30px;
   cursor: pointer;
-  z-index: 1001;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(139, 94, 60, 0.2);
 }
 
 .signin-button:hover {
-  background-color: #b08d63;
+  background-color: #6b4423;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(139, 94, 60, 0.3);
 }
 
 /* Hamburger Menu Styles */
@@ -126,10 +198,11 @@ const SignInView = () => {
   display: none;
   flex-direction: column;
   justify-content: space-between;
-  width: 30px;
-  height: 21px;
+  width: 24px;
+  height: 18px;
   cursor: pointer;
   z-index: 1001;
+  margin-left: 5px;
 }
 
 .hamburger span {
@@ -146,34 +219,68 @@ const SignInView = () => {
     display: flex;
   }
 
+  .right-buttons {
+    gap: 12px;
+  }
+
   .nav-links {
     position: fixed;
-    top: 0;
+    top: 60px;
     right: -100%;
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 60px);
     background-color: #fff;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 2rem;
     gap: 2rem;
     transition: right 0.3s ease;
-    z-index: 1000;
+  }
+
+  .nav-links li {
+    width: 100%;
+    text-align: center;
+  }
+
+  .nav-links a {
+    display: block;
+    font-size: 1.2rem;
+    padding: 1rem;
+    width: 100%;
+  }
+
+  .nav-links a::after {
+    bottom: 0;
   }
 
   .nav-links.active {
     right: 0;
   }
 
-  .signin-button {
-    position: fixed;
-    top: 15px;
-    right: 70px;
+  .nav-links a {
+    font-size: 1.2rem;
+    padding: 1rem;
+    width: 100%;
+    text-align: center;
   }
 
-  /* Hamburger Animation */
+  .signin-button {
+    padding: 0.4rem 1.2rem;
+    font-size: 1rem;
+  }
+
+  .logo span {
+    font-size: 1.2rem;
+  }
+
+  .logo-image {
+    height: 35px;
+    margin-right: 15px;
+  }
+
   .hamburger.active span:nth-child(1) {
-    transform: translateY(9px) rotate(45deg);
+    transform: rotate(45deg) translate(5px, 5px);
   }
 
   .hamburger.active span:nth-child(2) {
@@ -181,25 +288,28 @@ const SignInView = () => {
   }
 
   .hamburger.active span:nth-child(3) {
-    transform: translateY(-9px) rotate(-45deg);
+    transform: rotate(-45deg) translate(7px, -6px);
   }
 }
 
-/* Small Mobile Screens */
+/* Additional responsive breakpoint for even smaller screens */
 @media screen and (max-width: 480px) {
-  .logo-image {
-    height: 30px;
-    margin-right: 10px;
+  .navbar {
+    padding: 10px;
+  }
+
+  .right-buttons {
+    gap: 10px;
   }
 
   .signin-button {
-    padding: 6px 12px;
+    padding: 0.3rem 1rem;
     font-size: 0.9rem;
-    right: 60px;
   }
 
-  .nav-links a {
-    font-size: 1.2rem;
+  .logo-image {
+    height: 30px;
+    margin-right: 10px;
   }
 }
 
