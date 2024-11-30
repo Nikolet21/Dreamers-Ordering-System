@@ -50,15 +50,16 @@ const closeModal = () => {
 
 const submitOrder = () => {
   if (!quantityError.value) {
-    emit('submit', {
+    const orderDetails = {
+      name: props.product.name,
       size: selectedSize.value,
       quantity: quantity.value,
       totalPrice: totalPrice.value,
-    })
+      image: props.product.image
+    }
+    emit('submit', orderDetails)
+    closeModal()
   }
-  selectedSize.value = ''
-  quantity.value = ''
-  totalPrice.value = ''
 }
 
 watch(quantity, validateQuantity)

@@ -4,8 +4,9 @@ import { defineAsyncComponent, ref } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
-import { faCartShopping} from '@fortawesome/free-solid-svg-icons'
-library.add(faCartShopping)
+import { faCartShopping, faTrash } from '@fortawesome/free-solid-svg-icons'
+library.add(faCartShopping, faTrash)
+
 const Products = defineAsyncComponent(() => import('../components/ProductSection.vue'))
 const Home = defineAsyncComponent(() => import('../components/HomeSection.vue'))
 const About = defineAsyncComponent(() => import('../components/AboutSection.vue'))
@@ -13,17 +14,40 @@ const Facility = defineAsyncComponent(() => import('../components/FacilitySectio
 const Review = defineAsyncComponent(() => import('../components/ReviewSection.vue'))
 const currentView = ref('Home')
 const isMenuOpen = ref(false)
+const isCartOpen = ref(false)
+const cartItems = ref([])
 
 const setView = (view) => (currentView.value = view)
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value)
 const closeMenu = () => (isMenuOpen.value = false)
+const toggleCart = () => (isCartOpen.value = !isCartOpen.value)
+
+const addToCart = (item) => {
+  cartItems.value.push(item)
+}
+
+const clearCart = () => {
+  cartItems.value = []
+  isCartOpen.value = false
+}
+
+const placeOrder = () => {
+  // Here you would typically send the order to your backend
+  console.log('Placing order:', cartItems.value)
+  alert('Order placed successfully!')
+  clearCart()
+}
+
+const removeFromCart = (index) => {
+  cartItems.value.splice(index, 1)
+}
+
+const getTotalPrice = () => {
+  return cartItems.value.reduce((total, item) => total + item.totalPrice, 0)
+}
 
 const SignInView = () => {
   router.push('/signin')
-}
-
-const addToCart = () => {
-  console.log('add to cart')
 }
 
 </script>
@@ -47,9 +71,38 @@ const addToCart = () => {
 
       <!-- Right Buttons -->
       <div class="right-buttons">
-        <button @click="addToCart()" class="icon-button">
-          <font-awesome-icon :icon="['fas', 'cart-shopping']" />
-        </button>
+        <div class="cart-container">
+          <button @click="toggleCart" class="icon-button">
+            <font-awesome-icon :icon="['fas', 'cart-shopping']" />
+            <span v-if="cartItems.length" class="cart-badge">{{ cartItems.length }}</span>
+          </button>
+
+          <!-- Cart Dropdown -->
+          <div v-if="isCartOpen" class="cart-dropdown">
+            <div v-if="cartItems.length === 0" class="empty-cart">
+              Your cart is empty
+            </div>
+            <div v-else class="cart-items">
+              <div v-for="(item, index) in cartItems" :key="index" class="cart-item">
+                <div class="item-details">
+                  <h4>{{ item.name }}</h4>
+                  <p>Size: {{ item.size }}, Qty: {{ item.quantity }}</p>
+                  <p>₱{{ item.totalPrice.toFixed(2) }}</p>
+                </div>
+                <button @click="removeFromCart(index)" class="remove-item">
+                  <font-awesome-icon :icon="['fas', 'trash']" />
+                </button>
+              </div>
+              <div class="cart-total">
+                <span>Total: ₱{{ getTotalPrice().toFixed(2) }}</span>
+              </div>
+              <div class="cart-actions">
+                <button @click="clearCart" class="clear-cart">Clear Cart</button>
+                <button @click="placeOrder" class="place-order">Place Order</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <button class="signin-button" @click="SignInView()">Sign in</button>
         <div class="hamburger" @click="toggleMenu" :class="{ 'active': isMenuOpen }">
           <span></span>
@@ -62,7 +115,7 @@ const addToCart = () => {
     <main class="main-content" :class="{ 'menu-open': isMenuOpen }">
       <component :is="currentView === 'Home' ? Home : null" />
       <component :is="currentView === 'About' ? About : null" />
-      <component :is="currentView === 'Product' ? Products : null" />
+      <component :is="currentView === 'Product' ? Products : null" @addToCart="addToCart" />
       <component :is="currentView === 'Facility' ? Facility : null" />
       <component :is="currentView === 'Review' ? Review : null" />
     </main>
@@ -324,5 +377,118 @@ const addToCart = () => {
   .nav-links a {
     font-size: 1rem;
   }
+}
+
+.cart-container {
+  position: relative;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.cart-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 300px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  z-index: 1000;
+  margin-top: 0.5rem;
+}
+
+.empty-cart {
+  text-align: center;
+  padding: 1rem;
+  color: #666;
+}
+
+.cart-items {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.item-details h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+}
+
+.item-details p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.remove-item {
+  background: none;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.remove-item:hover {
+  color: #c0392b;
+}
+
+.cart-total {
+  padding: 1rem;
+  text-align: right;
+  font-weight: bold;
+  border-top: 2px solid #eee;
+}
+
+.cart-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.clear-cart,
+.place-order {
+  flex: 1;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.clear-cart {
+  background-color: #e74c3c;
+  color: white;
+}
+
+.place-order {
+  background-color: #8b5e3c;
+  color: white;
+}
+
+.clear-cart:hover {
+  background-color: #c0392b;
+}
+
+.place-order:hover {
+  background-color: #6b4423;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
+import { ref, defineAsyncComponent, defineEmits } from 'vue'
 const OrderingModal = defineAsyncComponent(() => import('../components/OrderingModal.vue'))
 
 const isOrderingModalOpen = ref(false)
@@ -13,6 +13,12 @@ const openOrderingModal = (product) => {
 const closeOrderingModal = () => {
   isOrderingModalOpen.value = false
   selectedProduct.value = null
+}
+
+const emit = defineEmits(['addToCart'])
+
+const handleOrderSubmit = (orderDetails) => {
+  emit('addToCart', orderDetails)
 }
 
 const coffees = [
@@ -84,6 +90,7 @@ const coffees = [
       :isOpen="isOrderingModalOpen"
       :product="selectedProduct"
       @close="closeOrderingModal"
+      @submit="handleOrderSubmit"
     />
   </div>
 </template>
