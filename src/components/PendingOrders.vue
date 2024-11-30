@@ -36,7 +36,10 @@
           </div>
         </div>
         <div class="action-buttons">
-          <button class="edit-btn" @click="editOrder(order)">Edit</button>
+          <button class="edit-btn" @click="editStatus(order)">
+            <font-awesome-icon :icon="['fas', 'edit']" />
+            Edit Status
+          </button>
           <button
             class="complete-btn"
             @click="completeOrder(order)"
@@ -69,6 +72,31 @@
         :disabled="currentPage === totalPages"
       >&gt;</button>
     </div>
+
+    <!-- Edit Status Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Edit Order Status</h2>
+        <div class="form-group">
+          <label>Status</label>
+          <select 
+            v-model="editingOrder.status"
+            :class="{ 'error': errors.status }"
+          >
+            <option value="">Select status</option>
+            <option value="Pending">Pending</option>
+            <option value="Processing">Processing</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <span class="error-message" v-if="errors.status">{{ errors.status }}</span>
+        </div>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="cancelEdit">Cancel</button>
+          <button class="confirm-btn" @click="confirmEdit">Confirm</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -82,6 +110,14 @@ const orderStatuses = ['All', 'Pending', 'Processing', 'Completed', 'Cancelled']
 // State
 const currentFilter = ref('All')
 const currentPage = ref(1)
+const showEditModal = ref(false)
+const editingOrder = ref({
+  id: null,
+  status: ''
+})
+const errors = ref({
+  status: ''
+})
 
 // Mock Data
 const orders = ref([
@@ -351,9 +387,36 @@ const formatTime = (date) => {
   })
 }
 
-const editOrder = (order) => {
-  // Implement edit functionality
-  console.log('Editing order:', order.id)
+const editStatus = (order) => {
+  editingOrder.value = { ...order }
+  showEditModal.value = true
+}
+
+const cancelEdit = () => {
+  showEditModal.value = false
+  editingOrder.value = {
+    id: null,
+    status: ''
+  }
+  errors.value.status = ''
+}
+
+const confirmEdit = () => {
+  if (!editingOrder.value.status) {
+    errors.value.status = 'Status is required'
+    return
+  }
+
+  const index = orders.value.findIndex(o => o.id === editingOrder.value.id)
+  if (index !== -1) {
+    orders.value[index] = { ...orders.value[index], status: editingOrder.value.status }
+  }
+  showEditModal.value = false
+  editingOrder.value = {
+    id: null,
+    status: ''
+  }
+  errors.value.status = ''
 }
 
 const completeOrder = (order) => {
@@ -568,6 +631,132 @@ const completeOrder = (order) => {
 .page-btn:disabled {
   background-color: #D7CCC8;
   cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #8D6E63;
+  font-size: 1.5rem;
+  font-weight: 600;
+  border-bottom: 2px solid #8D6E63;
+  padding-bottom: 0.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #5D4037;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #D7CCC8;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  background-color: #FAFAFA;
+  color: #5D4037;
+}
+
+.form-group select:focus {
+  border-color: #8D6E63;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(141, 110, 99, 0.1);
+  background-color: white;
+}
+
+.form-group select.error {
+  border-color: #D32F2F;
+  background-color: #FFF8F8;
+}
+
+.form-group select.error:focus {
+  border-color: #D32F2F;
+  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+}
+
+.error-message {
+  color: #D32F2F;
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  display: block;
+  font-weight: 500;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #EFEBE9;
+}
+
+.cancel-btn,
+.confirm-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn {
+  background-color: #EFEBE9;
+  color: #5D4037;
+}
+
+.cancel-btn:hover {
+  background-color: #D7CCC8;
+}
+
+.confirm-btn {
+  background-color: #8D6E63;
+  color: white;
+}
+
+.confirm-btn:hover {
+  background-color: #6D4C41;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(109, 76, 65, 0.2);
+}
+
+.confirm-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 /* Responsive Design */
