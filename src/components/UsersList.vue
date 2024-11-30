@@ -22,6 +22,13 @@
       </div>
     </div>
 
+    <!-- Create Button Section -->
+    <div class="action-section">
+      <button class="create-btn" @click="showCreateModal = true">
+        <font-awesome-icon :icon="['fas', 'plus']" /> Create User
+      </button>
+    </div>
+
     <!-- Users Table -->
     <div class="table-container">
       <table class="users-table">
@@ -224,23 +231,80 @@
         </div>
       </div>
     </div>
+    <!-- Create User Modal -->
+    <div v-if="showCreateModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Create New User</h2>
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label>Name</label>
+            <input 
+              type="text" 
+              v-model="newUser.name" 
+              placeholder="Enter name"
+              :class="{ 'error': errors.name }"
+              @input="validateField('name')"
+            />
+            <span class="error-message" v-if="errors.name">{{ errors.name }}</span>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input 
+              type="text" 
+              v-model="newUser.email" 
+              placeholder="Enter email"
+              :class="{ 'error': errors.email }"
+              @input="validateField('email')"
+            />
+            <span class="error-message" v-if="errors.email">{{ errors.email }}</span>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="password-input">
+              <input 
+                :type="showPassword ? 'text' : 'password'"
+                v-model="newUser.password" 
+                placeholder="Enter password"
+                :class="{ 'error': errors.password }"
+                @input="validateField('password')"
+              />
+              <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
+                <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
+              </button>
+            </div>
+            <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select 
+              v-model="newUser.role"
+              :class="{ 'error': errors.role }"
+              @change="validateField('role')"
+            >
+              <option value="">Select role</option>
+              <option value="Admin">Admin</option>
+              <option value="Manager">Manager</option>
+              <option value="Staff">Staff</option>
+            </select>
+            <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="cancelCreate">Cancel</button>
+            <button type="submit" class="confirm-btn">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
+import { faSort, faSortUp, faSortDown, faEdit, faTrash, faPlus, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faSort,
-  faSortUp,
-  faSortDown,
-  faEdit,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
 
-// Add icons to the library
-library.add(faSort, faSortUp, faSortDown, faEdit, faTrash)
+library.add(faSort, faSortUp, faSortDown, faEdit, faTrash, faPlus, faEye, faEyeSlash)
 
 // Constants
 const ITEMS_PER_PAGE = 10
@@ -265,11 +329,22 @@ const errors = ref({
   name: '',
   email: '',
   role: '',
-  status: ''
+  status: '',
+  password: ''
 })
 
 const showDeleteModal = ref(false)
 const userToDelete = ref(null)
+
+const showCreateModal = ref(false)
+const newUser = ref({
+  name: '',
+  email: '',
+  password: '',
+  role: ''
+})
+
+const showPassword = ref(false)
 
 const editUser = (user) => {
   editingUser.value = { ...user }
@@ -361,6 +436,102 @@ const confirmDelete = () => {
   }
   showDeleteModal.value = false
   userToDelete.value = null
+}
+
+const handleSubmit = (e) => {
+  e.preventDefault()
+  
+  // Validate all fields
+  validateField('name')
+  validateField('email')
+  validateField('password')
+  validateField('role')
+
+  // Check if there are any errors
+  const hasErrors = Object.values(errors.value).some(error => error !== '')
+  if (hasErrors) return
+
+  createUser()
+}
+
+const validateField = (field) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z]).{8,}$/
+
+  switch (field) {
+    case 'name':
+      if (!newUser.value.name.trim()) {
+        errors.value.name = 'Name is required'
+      } else if (newUser.value.name.trim().length < 2) {
+        errors.value.name = 'Name must be at least 2 characters'
+      } else {
+        errors.value.name = ''
+      }
+      break
+
+    case 'email':
+      if (!newUser.value.email.trim()) {
+        errors.value.email = 'Email is required'
+      } else if (!emailRegex.test(newUser.value.email)) {
+        errors.value.email = 'Please enter a valid email address'
+      } else {
+        errors.value.email = ''
+      }
+      break
+
+    case 'password':
+      if (!newUser.value.password) {
+        errors.value.password = 'Password is required'
+      } else if (!passwordRegex.test(newUser.value.password)) {
+        errors.value.password = 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character'
+      } else {
+        errors.value.password = ''
+      }
+      break
+
+    case 'role':
+      if (!newUser.value.role) {
+        errors.value.role = 'Role is required'
+      } else {
+        errors.value.role = ''
+      }
+      break
+  }
+}
+
+const createUser = async () => {
+  try {
+    // Add your API call here to create the user
+    const createdUser = {
+      id: users.value.length + 1,
+      ...newUser.value,
+      status: 'active'
+    }
+    users.value.push(createdUser)
+    showCreateModal.value = false
+    resetCreateForm()
+  } catch (error) {
+    console.error('Error creating user:', error)
+  }
+}
+
+const cancelCreate = () => {
+  showCreateModal.value = false
+  resetCreateForm()
+}
+
+const resetCreateForm = () => {
+  newUser.value = {
+    name: '',
+    email: '',
+    password: '',
+    role: ''
+  }
+  errors.value = {}
+}
+
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
 }
 
 // Mock Data (Replace with actual API calls)
@@ -726,7 +897,7 @@ const sortBy = (field) => {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .modal-content h2 {
@@ -767,7 +938,7 @@ const sortBy = (field) => {
 .form-group select:focus {
   border-color: #8D6E63;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(141, 110, 99, 0.1);
+  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.1);
   background-color: white;
 }
 
@@ -784,7 +955,7 @@ const sortBy = (field) => {
 .form-group input.error:focus,
 .form-group select.error:focus {
   border-color: #D32F2F;
-  box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);
+  box-shadow: 0 0 0 2px rgba(211, 47, 47, 0.1);
 }
 
 .error-message {
@@ -888,5 +1059,101 @@ const sortBy = (field) => {
 .delete-confirm-btn:active {
   transform: translateY(0);
   box-shadow: none;
+}
+
+.action-section {
+  margin: 20px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.create-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.create-btn:hover {
+  background-color: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.create-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.error-summary,
+.error-header,
+.error-summary ul,
+.error-summary li,
+.field-error,
+.error-input {
+  display: none;
+}
+
+.password-input {
+  position: relative;
+}
+
+.visibility-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #8d6e63;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.visibility-toggle:hover {
+  color: #5d4037;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input[type="password"] {
+  padding-right: 40px;
+}
+
+input.error {
+  border-color: #D32F2F;
+  background-color: #FFF3F3;
+}
+
+.error-message {
+  color: #D32F2F;
+  font-size: 0.85rem;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 </style>
