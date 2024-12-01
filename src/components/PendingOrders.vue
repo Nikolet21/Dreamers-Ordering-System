@@ -1,170 +1,3 @@
-<template>
-  <div class="orders-container">
-    <!-- Filter Section -->
-    <div class="filter-section">
-      <div class="status-filters">
-        <button
-          v-for="status in orderStatuses"
-          :key="status"
-          :class="['filter-btn', { active: currentFilter === status }]"
-          @click="setFilter(status)"
-        >
-          {{ status }}
-        </button>
-      </div>
-      <div class="search-container">
-        <div class="search-bar">
-          <font-awesome-icon :icon="['fas', 'search']" class="search-icon" />
-          <input
-            type="text"
-            v-model="searchQuery"
-            placeholder="Search customer name..."
-            class="search-input"
-          >
-        </div>
-      </div>
-    </div>
-
-    <!-- Orders Grid -->
-    <div v-if="paginatedOrders.length" class="orders-grid">
-      <div v-for="order in paginatedOrders" :key="order.id" class="order-card">
-        <div class="order-header">
-          <h3>Order #{{ order.id }}</h3>
-          <span :class="['status', order.status.toLowerCase()]">{{ order.status }}</span>
-        </div>
-        <div class="customer-info">
-          <h4>Customer: {{ order.customerName }}</h4>
-          <p>Ordered at: {{ formatTime(order.orderTime) }}</p>
-        </div>
-        <div class="products-section">
-          <h4>Ordered Items:</h4>
-          <div class="products-list">
-            <div v-for="product in displayedProducts(order)" :key="product.id" class="product-item">
-              <img :src="product.image" :alt="product.name">
-              <div class="product-details">
-                <span>{{ product.name }}</span>
-                <div class="product-info">
-                  <small>Size: {{ product.size }}</small>
-                  <small>Qty: {{ product.quantity }}</small>
-                  <small>₱{{ product.totalPrice.toFixed(2) }}</small>
-                </div>
-              </div>
-            </div>
-            <div v-if="order.products.length > 2" class="more-items" @click="viewReceipt(order)">
-              + {{ order.products.length - 2 }} more items...
-            </div>
-          </div>
-        </div>
-        <div class="action-buttons">
-          <button class="view-btn" @click="viewReceipt(order)">
-            <font-awesome-icon :icon="['fas', 'eye']" />
-            View
-          </button>
-          <button class="edit-btn" @click="editStatus(order)">
-            <font-awesome-icon :icon="['fas', 'edit']" />
-            Edit
-          </button>
-          <button
-            class="complete-btn"
-            @click="completeOrder(order)"
-            :disabled="order.status === 'Completed' || order.status === 'Cancelled'"
-          >
-            <font-awesome-icon :icon="['fas', 'check']" />
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
-    <div v-else class="no-results">
-      <font-awesome-icon :icon="['fas', 'user-slash']" class="no-results-icon" />
-      <p>No Customer Found</p>
-      <small v-if="searchQuery">Try a different search term</small>
-    </div>
-
-    <!-- Pagination -->
-    <div class="pagination" v-if="totalPages > 1">
-      <button
-        class="page-btn"
-        @click="prevPage"
-        :disabled="currentPage === 1"
-      >&lt;</button>
-      <button
-        v-for="pageNum in displayedPageNumbers"
-        :key="pageNum"
-        :class="['page-btn', { active: currentPage === pageNum }]"
-        @click="goToPage(pageNum)"
-      >
-        {{ pageNum }}
-      </button>
-      <button
-        class="page-btn"
-        @click="nextPage"
-        :disabled="currentPage === totalPages"
-      >&gt;</button>
-    </div>
-
-    <!-- Edit Status Modal -->
-    <div v-if="showEditModal" class="modal-overlay">
-      <div class="modal-content">
-        <h2>Edit Order Status</h2>
-        <div class="form-group">
-          <label>Status</label>
-          <select
-            v-model="editingOrder.status"
-            :class="{ 'error': errors.status }"
-          >
-            <option value="">Select status</option>
-            <option value="Pending">Pending</option>
-            <option value="Processing">Processing</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          <span class="error-message" v-if="errors.status">{{ errors.status }}</span>
-        </div>
-        <div class="modal-actions">
-          <button class="cancel-btn" @click="cancelEdit">Cancel</button>
-          <button class="confirm-btn" @click="confirmEdit">Confirm</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Receipt Modal -->
-    <div v-if="showReceipt" class="modal-overlay">
-      <div class="receipt-modal">
-        <div class="receipt-content">
-          <h2>Order Receipt</h2>
-          <p><strong>Order #:</strong> {{ currentReceipt.id }}</p>
-          <p><strong>Date:</strong> {{ formatTime(currentReceipt.orderTime) }}</p>
-          <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
-
-          <div class="receipt-items">
-            <h3>Order Details</h3>
-            <div v-for="product in currentReceipt.products" :key="product.id" class="receipt-item">
-              <div class="item-details">
-                <div class="item-name">{{ product.name }}</div>
-                <div class="item-info">
-                  <span>Size: {{ product.size }}</span>
-                  <span>Qty: {{ product.quantity }}</span>
-                </div>
-                <div class="item-price">₱{{ (product.price * product.quantity).toFixed(2) }}</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="receipt-total">
-            <strong>Total Amount:</strong>
-            <span>₱{{ calculateTotal(currentReceipt.products).toFixed(2) }}</span>
-          </div>
-
-          <p class="thank-you">Thank you for choosing Dreamers!</p>
-
-          <button class="close-receipt" @click="closeReceipt">Close</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -355,6 +188,173 @@ const calculateTotal = (products) => {
   return products.reduce((total, product) => total + (product.price * product.quantity), 0)
 }
 </script>
+
+<template>
+  <div class="orders-container">
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <div class="status-filters">
+        <button
+          v-for="status in orderStatuses"
+          :key="status"
+          :class="['filter-btn', { active: currentFilter === status }]"
+          @click="setFilter(status)"
+        >
+          {{ status }}
+        </button>
+      </div>
+      <div class="search-container">
+        <div class="search-bar">
+          <font-awesome-icon :icon="['fas', 'search']" class="search-icon" />
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="Search customer name..."
+            class="search-input"
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Grid -->
+    <div v-if="paginatedOrders.length" class="orders-grid">
+      <div v-for="order in paginatedOrders" :key="order.id" class="order-card">
+        <div class="order-header">
+          <h3>Order #{{ order.id }}</h3>
+          <span :class="['status', order.status.toLowerCase()]">{{ order.status }}</span>
+        </div>
+        <div class="customer-info">
+          <h4>Customer: {{ order.customerName }}</h4>
+          <p>Ordered at: {{ formatTime(order.orderTime) }}</p>
+        </div>
+        <div class="products-section">
+          <h4>Ordered Items:</h4>
+          <div class="products-list">
+            <div v-for="product in displayedProducts(order)" :key="product.id" class="product-item">
+              <img :src="product.image" :alt="product.name">
+              <div class="product-details">
+                <span>{{ product.name }}</span>
+                <div class="product-info">
+                  <small>Size: {{ product.size }}</small>
+                  <small>Qty: {{ product.quantity }}</small>
+                  <small>₱{{ product.totalPrice.toFixed(2) }}</small>
+                </div>
+              </div>
+            </div>
+            <div v-if="order.products.length > 2" class="more-items" @click="viewReceipt(order)">
+              + {{ order.products.length - 2 }} more items...
+            </div>
+          </div>
+        </div>
+        <div class="action-buttons">
+          <button class="view-btn" @click="viewReceipt(order)">
+            <font-awesome-icon :icon="['fas', 'eye']" />
+            View
+          </button>
+          <button class="edit-btn" @click="editStatus(order)">
+            <font-awesome-icon :icon="['fas', 'edit']" />
+            Edit
+          </button>
+          <button
+            class="complete-btn"
+            @click="completeOrder(order)"
+            :disabled="order.status === 'Completed' || order.status === 'Cancelled'"
+          >
+            <font-awesome-icon :icon="['fas', 'check']" />
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+    <div v-else class="no-results">
+      <font-awesome-icon :icon="['fas', 'user-slash']" class="no-results-icon" />
+      <p>No Customer Found</p>
+      <small v-if="searchQuery">Try a different search term</small>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" v-if="totalPages > 1">
+      <button
+        class="page-btn"
+        @click="prevPage"
+        :disabled="currentPage === 1"
+      >&lt;</button>
+      <button
+        v-for="pageNum in displayedPageNumbers"
+        :key="pageNum"
+        :class="['page-btn', { active: currentPage === pageNum }]"
+        @click="goToPage(pageNum)"
+      >
+        {{ pageNum }}
+      </button>
+      <button
+        class="page-btn"
+        @click="nextPage"
+        :disabled="currentPage === totalPages"
+      >&gt;</button>
+    </div>
+
+    <!-- Edit Status Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Edit Order Status</h2>
+        <div class="form-group">
+          <label>Status</label>
+          <select
+            v-model="editingOrder.status"
+            :class="{ 'error': errors.status }"
+          >
+            <option value="">Select status</option>
+            <option value="Pending">Pending</option>
+            <option value="Processing">Processing</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <span class="error-message" v-if="errors.status">{{ errors.status }}</span>
+        </div>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="cancelEdit">Cancel</button>
+          <button class="confirm-btn" @click="confirmEdit">Confirm</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receipt Modal -->
+    <div v-if="showReceipt" class="modal-overlay">
+      <div class="receipt-modal">
+        <div class="receipt-content">
+          <h2>Order Receipt</h2>
+          <p><strong>Order #:</strong> {{ currentReceipt.id }}</p>
+          <p><strong>Date:</strong> {{ formatTime(currentReceipt.orderTime) }}</p>
+          <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
+
+          <div class="receipt-items">
+            <h3>Order Details</h3>
+            <div v-for="product in currentReceipt.products" :key="product.id" class="receipt-item">
+              <div class="item-details">
+                <div class="item-name">{{ product.name }}</div>
+                <div class="item-info">
+                  <span>Size: {{ product.size }}</span>
+                  <span>Qty: {{ product.quantity }}</span>
+                </div>
+                <div class="item-price">₱{{ (product.price * product.quantity).toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="receipt-total">
+            <strong>Total Amount:</strong>
+            <span>₱{{ calculateTotal(currentReceipt.products).toFixed(2) }}</span>
+          </div>
+
+          <p class="thank-you">Thank you for choosing Dreamers!</p>
+
+          <button class="close-receipt" @click="closeReceipt">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
 
 <style scoped>
 .orders-container {

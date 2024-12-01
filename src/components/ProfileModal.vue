@@ -1,65 +1,3 @@
-<template>
-  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
-    <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h2>Account Information</h2>
-        <button class="close-button" @click="closeModal">
-          <font-awesome-icon :icon="['fas', 'times']" />
-        </button>
-      </div>
-
-      <div class="modal-body">
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
-
-        <div v-if="!isEditing" class="profile-info">
-          <div class="info-item">
-            <label>Username:</label>
-            <span>{{ userStore.username }}</span>
-          </div>
-          <div class="info-item">
-            <label>Email:</label>
-            <span>{{ userStore.email }}</span>
-          </div>
-          <button class="edit-button" @click="toggleEdit">
-            <font-awesome-icon :icon="['fas', 'edit']" /> Edit Profile
-          </button>
-        </div>
-
-        <div v-else class="profile-edit">
-          <div class="info-item">
-            <label>Username:</label>
-            <input 
-              v-model.trim="editedProfile.username" 
-              type="text" 
-              :placeholder="userStore.username"
-              @keyup.enter="saveChanges"
-            >
-          </div>
-          <div class="info-item">
-            <label>Email:</label>
-            <input 
-              v-model.trim="editedProfile.email" 
-              type="email" 
-              :placeholder="userStore.email"
-              @keyup.enter="saveChanges"
-            >
-          </div>
-          <div class="button-group">
-            <button class="save-button" @click="saveChanges">
-              <font-awesome-icon :icon="['fas', 'save']" /> Save
-            </button>
-            <button class="cancel-button" @click="cancelEdit">
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, watch } from 'vue';
 import { useUserStore } from '@/stores/userStore';
@@ -171,6 +109,68 @@ const cancelEdit = () => {
 };
 </script>
 
+<template>
+  <div v-if="isOpen" class="modal-overlay" @click="closeModal">
+    <div class="modal-content" @click.stop>
+      <div class="modal-header">
+        <h2>Account Information</h2>
+        <button class="close-button" @click="closeModal">
+          <font-awesome-icon :icon="['fas', 'times']" />
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div v-if="errorMessage" class="error-message">
+          {{ errorMessage }}
+        </div>
+
+        <div v-if="!isEditing" class="profile-info">
+          <div class="info-item">
+            <label>Username:</label>
+            <span>{{ userStore.username }}</span>
+          </div>
+          <div class="info-item">
+            <label>Email:</label>
+            <span>{{ userStore.email }}</span>
+          </div>
+          <button class="edit-button" @click="toggleEdit">
+            <font-awesome-icon :icon="['fas', 'edit']" /> Edit Profile
+          </button>
+        </div>
+
+        <div v-else class="profile-edit">
+          <div class="info-item">
+            <label>Username:</label>
+            <input
+              v-model.trim="editedProfile.username"
+              type="text"
+              :placeholder="userStore.username"
+              @keyup.enter="saveChanges"
+            >
+          </div>
+          <div class="info-item">
+            <label>Email:</label>
+            <input
+              v-model.trim="editedProfile.email"
+              type="email"
+              :placeholder="userStore.email"
+              @keyup.enter="saveChanges"
+            >
+          </div>
+          <div class="button-group">
+            <button class="save-button" @click="saveChanges">
+              <font-awesome-icon :icon="['fas', 'save']" /> Save
+            </button>
+            <button class="cancel-button" @click="cancelEdit">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .modal-overlay {
   position: fixed;
@@ -232,8 +232,8 @@ const cancelEdit = () => {
     padding: 10px;
   }
 
-  .edit-button, 
-  .save-button, 
+  .edit-button,
+  .save-button,
   .cancel-button {
     padding: 10px 16px;
     font-size: 14px;

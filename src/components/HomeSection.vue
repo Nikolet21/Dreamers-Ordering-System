@@ -1,3 +1,20 @@
+<script setup>
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
+
+const router = useRouter()
+const userStore = useUserStore()
+const emit = defineEmits(['showProducts'])
+
+const handleOrderClick = () => {
+  if (userStore.isLoggedIn) {
+    emit('showProducts')
+  } else {
+    router.push('/signin')
+  }
+}
+</script>
+
 <template>
   <section class="home-section">
     <div class="home-container">
@@ -24,23 +41,6 @@
     </div>
   </section>
 </template>
-
-<script setup>
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/userStore'
-
-const router = useRouter()
-const userStore = useUserStore()
-const emit = defineEmits(['showProducts'])
-
-const handleOrderClick = () => {
-  if (userStore.isLoggedIn) {
-    emit('showProducts')
-  } else {
-    router.push('/signin')
-  }
-}
-</script>
 
 <style scoped>
 .home-section {
