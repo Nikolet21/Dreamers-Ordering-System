@@ -2,11 +2,11 @@
 import router from '@/router'
 import { ref } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faEye, faEyeSlash, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useUserStore } from '@/stores/userStore'
 
-library.add(faEye, faEyeSlash)
+library.add(faEye, faEyeSlash, faExclamationCircle)
 
 const userStore = useUserStore()
 
@@ -21,6 +21,7 @@ const emailError = ref('')
 const usernameError = ref('')
 const passwordError = ref('')
 const confirmPasswordError = ref('')
+const loginError = ref('')
 
 const goBack = () => {
   router.push('/')
@@ -88,9 +89,11 @@ const toggleForm = () => {
   usernameError.value = ''
   passwordError.value = ''
   confirmPasswordError.value = ''
+  loginError.value = ''
 }
 
 const handleSubmit = () => {
+  loginError.value = ''  // Clear previous login error
   validateEmail()
   if (!isLogin.value) {
     validateUsername()
@@ -119,7 +122,7 @@ const handleSubmit = () => {
           router.push('/')
         }
       } else {
-        alert('Invalid email or password.')
+        loginError.value = 'Invalid email or password, please try again'
       }
     } else {
       // Handle sign up logic here
@@ -131,7 +134,6 @@ const handleSubmit = () => {
       }
       userStore.mockAccounts.push(userData)
       userStore.login(userData)
-      alert('Sign up successful!')
       router.push('/')
     }
   }
@@ -160,6 +162,16 @@ const handleSubmit = () => {
           <h2>{{ isLogin ? 'Log In' : 'Sign Up' }}</h2>
 
           <form @submit.prevent="handleSubmit" novalidate>
+            <!-- Login Error Message -->
+            <transition name="fade">
+              <div class="form-group login-error-container" v-if="isLogin && loginError">
+                <div class="login-error">
+                  <font-awesome-icon :icon="['fas', 'exclamation-circle']" class="error-icon" />
+                  {{ loginError }}
+                </div>
+              </div>
+            </transition>
+
             <!-- Email Field -->
             <div class="form-group">
               <label for="email">Email</label>
@@ -444,6 +456,49 @@ input.error {
 
 .toggle-form a:hover {
   text-decoration: underline;
+}
+
+.login-error-container {
+  margin: 0.5rem 0 1.5rem 0;
+}
+
+.login-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background-color: #fff5f5;
+  border: 1px solid #fc8181;
+  color: #c53030;
+  padding: 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(252, 129, 129, 0.2);
+  animation: shake 0.5s ease-in-out;
+}
+
+.error-icon {
+  font-size: 1.25rem;
+  color: #fc8181;
+}
+
+/* Fade transition */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 /* Responsive Design */
