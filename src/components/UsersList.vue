@@ -7,7 +7,7 @@
           <input
             type="text"
             v-model="nameFilter"
-            placeholder="Search by name..."
+            placeholder="Search by username..."
             @input="filterUsers"
           />
         </div>
@@ -34,22 +34,19 @@
       <table class="users-table">
         <thead>
           <tr>
-            <th @click="sortBy('name')" class="sortable">
+            <th @click="sortBy('username')" class="sortable">
               <div class="th-content">
-                <span>Name</span>
+                <span>Username</span>
                 <span class="sort-icons">
                   <font-awesome-icon
-                    v-if="sortField === 'name' && sortOrder === 'asc'"
+                    v-if="sortField === 'username' && sortOrder === 'asc'"
                     :icon="['fas', 'sort-up']"
                   />
                   <font-awesome-icon
-                    v-else-if="sortField === 'name' && sortOrder === 'desc'"
+                    v-else-if="sortField === 'username' && sortOrder === 'desc'"
                     :icon="['fas', 'sort-down']"
                   />
-                  <font-awesome-icon
-                    v-else
-                    :icon="['fas', 'sort']"
-                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
                 </span>
               </div>
             </th>
@@ -65,10 +62,7 @@
                     v-else-if="sortField === 'email' && sortOrder === 'desc'"
                     :icon="['fas', 'sort-down']"
                   />
-                  <font-awesome-icon
-                    v-else
-                    :icon="['fas', 'sort']"
-                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
                 </span>
               </div>
             </th>
@@ -84,29 +78,7 @@
                     v-else-if="sortField === 'role' && sortOrder === 'desc'"
                     :icon="['fas', 'sort-down']"
                   />
-                  <font-awesome-icon
-                    v-else
-                    :icon="['fas', 'sort']"
-                  />
-                </span>
-              </div>
-            </th>
-            <th @click="sortBy('status')" class="sortable">
-              <div class="th-content">
-                <span>Status</span>
-                <span class="sort-icons">
-                  <font-awesome-icon
-                    v-if="sortField === 'status' && sortOrder === 'asc'"
-                    :icon="['fas', 'sort-up']"
-                  />
-                  <font-awesome-icon
-                    v-else-if="sortField === 'status' && sortOrder === 'desc'"
-                    :icon="['fas', 'sort-down']"
-                  />
-                  <font-awesome-icon
-                    v-else
-                    :icon="['fas', 'sort']"
-                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
                 </span>
               </div>
             </th>
@@ -114,28 +86,23 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-if="paginatedUsers.length === 0">
-            <td colspan="5" class="no-users-message">No Users to be found</td>
-          </tr>
-          <tr v-else v-for="user in paginatedUsers" :key="user.id">
-            <td>{{ user.name }}</td>
+          <tr v-for="user in paginatedUsers" :key="user.email">
+            <td>{{ user.username }}</td>
             <td>{{ user.email }}</td>
-            <td>{{ user.role }}</td>
             <td>
-              <span :class="['status-badge', user.status.toLowerCase()]">
-                {{ user.status }}
-              </span>
+              <span :class="['role-badge', user.role]">{{ user.role }}</span>
             </td>
-            <td class="action-buttons">
-              <button class="edit-btn" @click="editUser(user)">
-                <font-awesome-icon :icon="['fas', 'edit']" />
-                Edit
+            <td class="actions">
+              <button class="action-btn edit" @click="editUser(user)" title="Edit User">
+                <font-awesome-icon :icon="['fas', 'pen']" />
               </button>
-              <button class="delete-btn" @click="deleteUser(user)">
+              <button class="action-btn delete" @click="deleteUser(user)" title="Delete User">
                 <font-awesome-icon :icon="['fas', 'trash']" />
-                Delete
               </button>
             </td>
+          </tr>
+          <tr v-if="paginatedUsers.length === 0">
+            <td colspan="4" class="no-data">No users found</td>
           </tr>
         </tbody>
       </table>
@@ -167,14 +134,14 @@
       <div class="modal-content">
         <h2>Edit User</h2>
         <div class="form-group">
-          <label>Name</label>
+          <label>Username</label>
           <input
             type="text"
-            v-model="editingUser.name"
-            placeholder="Enter name"
-            :class="{ 'error': errors.name }"
+            v-model="editingUser.username"
+            placeholder="Enter username"
+            :class="{ 'error': errors.username }"
           />
-          <span class="error-message" v-if="errors.name">{{ errors.name }}</span>
+          <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
         </div>
         <div class="form-group">
           <label>Email</label>
@@ -193,23 +160,11 @@
             :class="{ 'error': errors.role }"
           >
             <option value="">Select role</option>
-            <option value="Admin">Admin</option>
-            <option value="Manager">Manager</option>
-            <option value="Staff">Staff</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="staff">Staff</option>
           </select>
           <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select 
-            v-model="editingUser.status"
-            :class="{ 'error': errors.status }"
-          >
-            <option value="">Select status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-          <span class="error-message" v-if="errors.status">{{ errors.status }}</span>
         </div>
         <div class="modal-actions">
           <button class="cancel-btn" @click="cancelEdit">Cancel</button>
@@ -222,7 +177,7 @@
       <div class="modal-content delete-modal">
         <h2>Confirm Delete</h2>
         <p class="delete-message">
-          Are you sure you want to delete user <span class="user-highlight">{{ userToDelete?.name }}</span>?
+          Are you sure you want to delete user <span class="user-highlight">{{ userToDelete?.username }}</span>?
           This action cannot be undone.
         </p>
         <div class="modal-actions">
@@ -237,20 +192,20 @@
         <h2>Create New User</h2>
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label>Name</label>
+            <label>Username</label>
             <input 
               type="text" 
-              v-model="newUser.name" 
-              placeholder="Enter name"
-              :class="{ 'error': errors.name }"
-              @input="validateField('name')"
+              v-model="newUser.username" 
+              placeholder="Enter username"
+              :class="{ 'error': errors.username }"
+              @input="validateField('username')"
             />
-            <span class="error-message" v-if="errors.name">{{ errors.name }}</span>
+            <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
           </div>
           <div class="form-group">
             <label>Email</label>
             <input 
-              type="text" 
+              type="email" 
               v-model="newUser.email" 
               placeholder="Enter email"
               :class="{ 'error': errors.email }"
@@ -282,9 +237,9 @@
               @change="validateField('role')"
             >
               <option value="">Select role</option>
-              <option value="Admin">Admin</option>
-              <option value="Manager">Manager</option>
-              <option value="Staff">Staff</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="staff">Staff</option>
             </select>
             <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
           </div>
@@ -301,35 +256,70 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faSort, faSortUp, faSortDown, faEdit, faTrash, faPlus, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
+import { faPen, faTrash, faSort, faSortUp, faSortDown, faPlus, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import { useUserStore } from '@/stores/userStore'
 
-library.add(faSort, faSortUp, faSortDown, faEdit, faTrash, faPlus, faEye, faEyeSlash)
+library.add(faPen, faTrash, faSort, faSortUp, faSortDown, faPlus, faEye, faEyeSlash)
 
-// Constants
-const ITEMS_PER_PAGE = 10
-
-// State
+const userStore = useUserStore()
 const nameFilter = ref('')
 const emailFilter = ref('')
-const currentPage = ref(1)
-const sortField = ref('')
+const sortField = ref('username')
 const sortOrder = ref('asc')
+const currentPage = ref(1)
+const itemsPerPage = 5
+
+// Get accounts from store
+const accounts = computed(() => userStore.accounts)
+
+// Filtered and sorted users
+const filteredUsers = computed(() => {
+  let filtered = accounts.value.filter(user => {
+    const matchName = user.username.toLowerCase().includes(nameFilter.value.toLowerCase())
+    const matchEmail = user.email.toLowerCase().includes(emailFilter.value.toLowerCase())
+    return matchName && matchEmail
+  })
+
+  // Apply sorting
+  filtered.sort((a, b) => {
+    let fieldA = a[sortField.value]?.toLowerCase() ?? ''
+    let fieldB = b[sortField.value]?.toLowerCase() ?? ''
+    
+    if (sortOrder.value === 'asc') {
+      return fieldA.localeCompare(fieldB)
+    } else {
+      return fieldB.localeCompare(fieldA)
+    }
+  })
+
+  return filtered
+})
+
+// Paginated users
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
+  return filteredUsers.value.slice(start, end)
+})
+
+// Total pages
+const totalPages = computed(() => {
+  return Math.ceil(filteredUsers.value.length / itemsPerPage)
+})
 
 const showEditModal = ref(false)
 const editingUser = ref({
   id: null,
-  name: '',
+  username: '',
   email: '',
-  role: '',
-  status: ''
+  role: ''
 })
 
 const errors = ref({
-  name: '',
+  username: '',
   email: '',
   role: '',
-  status: '',
   password: ''
 })
 
@@ -338,7 +328,7 @@ const userToDelete = ref(null)
 
 const showCreateModal = ref(false)
 const newUser = ref({
-  name: '',
+  username: '',
   email: '',
   password: '',
   role: ''
@@ -355,16 +345,14 @@ const cancelEdit = () => {
   showEditModal.value = false
   editingUser.value = {
     id: null,
-    name: '',
+    username: '',
     email: '',
-    role: '',
-    status: ''
+    role: ''
   }
   errors.value = {
-    name: '',
+    username: '',
     email: '',
-    role: '',
-    status: ''
+    role: ''
   }
 }
 
@@ -372,27 +360,26 @@ const confirmEdit = () => {
   const isValid = validateForm()
   if (!isValid) return
 
-  const index = users.value.findIndex(u => u.id === editingUser.value.id)
+  const index = accounts.value.findIndex(u => u.id === editingUser.value.id)
   if (index !== -1) {
-    users.value[index] = { ...editingUser.value }
+    accounts.value[index] = { ...editingUser.value }
   }
   showEditModal.value = false
   errors.value = {
-    name: '',
+    username: '',
     email: '',
-    role: '',
-    status: ''
+    role: ''
   }
 }
 
 const validateForm = () => {
   let isValid = true
 
-  if (!editingUser.value.name) {
-    errors.value.name = 'Name is required'
+  if (!editingUser.value.username) {
+    errors.value.username = 'Username is required'
     isValid = false
   } else {
-    errors.value.name = ''
+    errors.value.username = ''
   }
 
   if (!editingUser.value.email) {
@@ -409,13 +396,6 @@ const validateForm = () => {
     errors.value.role = ''
   }
 
-  if (!editingUser.value.status) {
-    errors.value.status = 'Status is required'
-    isValid = false
-  } else {
-    errors.value.status = ''
-  }
-
   return isValid
 }
 
@@ -430,9 +410,9 @@ const cancelDelete = () => {
 }
 
 const confirmDelete = () => {
-  const index = users.value.findIndex(u => u.id === userToDelete.value.id)
+  const index = accounts.value.findIndex(u => u.id === userToDelete.value.id)
   if (index !== -1) {
-    users.value.splice(index, 1)
+    accounts.value.splice(index, 1)
   }
   showDeleteModal.value = false
   userToDelete.value = null
@@ -442,7 +422,7 @@ const handleSubmit = (e) => {
   e.preventDefault()
   
   // Validate all fields
-  validateField('name')
+  validateField('username')
   validateField('email')
   validateField('password')
   validateField('role')
@@ -459,13 +439,13 @@ const validateField = (field) => {
   const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z]).{8,}$/
 
   switch (field) {
-    case 'name':
-      if (!newUser.value.name.trim()) {
-        errors.value.name = 'Name is required'
-      } else if (newUser.value.name.trim().length < 2) {
-        errors.value.name = 'Name must be at least 2 characters'
+    case 'username':
+      if (!newUser.value.username.trim()) {
+        errors.value.username = 'Username is required'
+      } else if (newUser.value.username.trim().length < 2) {
+        errors.value.username = 'Username must be at least 2 characters'
       } else {
-        errors.value.name = ''
+        errors.value.username = ''
       }
       break
 
@@ -503,11 +483,10 @@ const createUser = async () => {
   try {
     // Add your API call here to create the user
     const createdUser = {
-      id: users.value.length + 1,
+      id: accounts.value.length + 1,
       ...newUser.value,
-      status: 'active'
     }
-    users.value.push(createdUser)
+    accounts.value.push(createdUser)
     showCreateModal.value = false
     resetCreateForm()
   } catch (error) {
@@ -522,7 +501,7 @@ const cancelCreate = () => {
 
 const resetCreateForm = () => {
   newUser.value = {
-    name: '',
+    username: '',
     email: '',
     password: '',
     role: ''
@@ -534,95 +513,6 @@ const togglePasswordVisibility = () => {
   showPassword.value = !showPassword.value
 }
 
-// Mock Data (Replace with actual API calls)
-const users = ref([
-  {
-    id: 1,
-    name: 'John Doe',
-    email: 'john@example.com',
-    role: 'Admin',
-    status: 'Active'
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    role: 'Staff',
-    status: 'Active'
-  },
-])
-
-// Computed Properties
-const filteredUsers = computed(() => {
-  let result = users.value.filter(user => {
-    const nameMatch = user.name.toLowerCase().includes(nameFilter.value.toLowerCase())
-    const emailMatch = user.email.toLowerCase().includes(emailFilter.value.toLowerCase())
-    return nameMatch && emailMatch
-  })
-
-  // Apply sorting if a sort field is selected
-  if (sortField.value) {
-    result.sort((a, b) => {
-      let aValue = a[sortField.value].toLowerCase()
-      let bValue = b[sortField.value].toLowerCase()
-
-      if (sortOrder.value === 'asc') {
-        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0
-      } else {
-        return aValue < bValue ? 1 : aValue > bValue ? -1 : 0
-      }
-    })
-  }
-
-  return result
-})
-
-const totalPages = computed(() => {
-  return Math.ceil(filteredUsers.value.length / ITEMS_PER_PAGE)
-})
-
-const paginatedUsers = computed(() => {
-  const start = (currentPage.value - 1) * ITEMS_PER_PAGE
-  const end = start + ITEMS_PER_PAGE
-  return filteredUsers.value.slice(start, end)
-})
-
-const displayedPageNumbers = computed(() => {
-  if (totalPages.value <= 5) {
-    return Array.from({ length: totalPages.value }, (_, i) => i + 1)
-  }
-
-  let pages = []
-  // Always show first page
-  pages.push(1)
-
-  // Calculate middle pages
-  let middleStart = Math.max(2, currentPage.value - 1)
-  let middleEnd = Math.min(totalPages.value - 1, currentPage.value + 1)
-
-  // Adjust if at the start
-  if (currentPage.value <= 3) {
-    middleStart = 2
-    middleEnd = 4
-  }
-  // Adjust if at the end
-  else if (currentPage.value >= totalPages.value - 2) {
-    middleStart = totalPages.value - 3
-    middleEnd = totalPages.value - 1
-  }
-
-  // Add middle pages
-  for (let i = middleStart; i <= middleEnd; i++) {
-    pages.push(i)
-  }
-
-  // Always show last page
-  pages.push(totalPages.value)
-
-  return pages
-})
-
-// Methods
 const filterUsers = () => {
   currentPage.value = 1
 }
@@ -737,56 +627,88 @@ const sortBy = (field) => {
   font-size: 14px;
 }
 
-.status-badge {
-  padding: 5px 10px;
-  border-radius: 15px;
-  font-size: 12px;
+.role-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
   font-weight: 500;
+  text-transform: capitalize;
 }
 
-.status-badge.active {
-  background-color: #E8F5E9;
-  color: #2E7D32;
+.role-badge.admin {
+  background-color: #EF5350;
+  color: white;
 }
 
-.status-badge.inactive {
-  background-color: #FFEBEE;
-  color: #C62828;
+.role-badge.manager {
+  background-color: #42A5F5;
+  color: white;
 }
 
-.action-buttons {
+.role-badge.staff {
+  background-color: #66BB6A;
+  color: white;
+}
+
+.role-badge.user {
+  background-color: #78909C;
+  color: white;
+}
+
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+}
+
+.actions {
   display: flex;
   gap: 8px;
+  justify-content: center;
 }
 
-.action-buttons button {
-  padding: 8px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 13px;
+.action-btn {
+  background: none;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  transition: background-color 0.3s ease;
+  justify-content: center;
+  cursor: pointer;
+  color: #8D6E63;
+  transition: all 0.2s ease;
+  padding: 0;
 }
 
-.edit-btn {
+.action-btn:hover {
   background-color: #8D6E63;
   color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(141, 110, 99, 0.2);
 }
 
-.delete-btn {
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.action-btn.edit:hover {
+  background-color: #8D6E63;
+  border-color: #8D6E63;
+}
+
+.action-btn.delete {
+  border-color: #8D6E63;
+  color: #8D6E63;
+}
+
+.action-btn.delete:hover {
   background-color: #D32F2F;
+  border-color: #D32F2F;
   color: white;
-}
-
-.edit-btn:hover {
-  background-color: #5D4037;
-}
-
-.delete-btn:hover {
-  background-color: #B71C1C;
 }
 
 .pagination {
@@ -824,12 +746,100 @@ const sortBy = (field) => {
   cursor: not-allowed;
 }
 
-.no-users-message {
-  text-align: center;
-  padding: 20px;
-  font-size: 16px;
+.action-section {
+  margin: 20px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.create-btn {
+  background-color: #8D6E63;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 500;
-  color: #9E9E9E;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.create-btn:hover {
+  background-color: #6D4C41;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(141, 110, 99, 0.2);
+}
+
+.create-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.error-summary,
+.error-header,
+.error-summary ul,
+.error-summary li,
+.field-error,
+.error-input {
+  display: none;
+}
+
+.password-input {
+  position: relative;
+}
+
+.visibility-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: #8d6e63;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.visibility-toggle:hover {
+  color: #5d4037;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input[type="password"] {
+  padding-right: 40px;
+}
+
+input.error {
+  border-color: #D32F2F;
+  background-color: #FFF3F3;
+}
+
+.error-message {
+  color: #D32F2F;
+  font-size: 0.85rem;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .sortable {
@@ -1059,101 +1069,5 @@ const sortBy = (field) => {
 .delete-confirm-btn:active {
   transform: translateY(0);
   box-shadow: none;
-}
-
-.action-section {
-  margin: 20px 0;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.create-btn {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.create-btn:hover {
-  background-color: #45a049;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.create-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.error-summary,
-.error-header,
-.error-summary ul,
-.error-summary li,
-.field-error,
-.error-input {
-  display: none;
-}
-
-.password-input {
-  position: relative;
-}
-
-.visibility-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  color: #8d6e63;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-}
-
-.visibility-toggle:hover {
-  color: #5d4037;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #8D6E63;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-input[type="password"] {
-  padding-right: 40px;
-}
-
-input.error {
-  border-color: #D32F2F;
-  background-color: #FFF3F3;
-}
-
-.error-message {
-  color: #D32F2F;
-  font-size: 0.85rem;
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 </style>
