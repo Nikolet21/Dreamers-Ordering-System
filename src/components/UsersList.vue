@@ -1,258 +1,3 @@
-<template>
-  <div class="users-container">
-    <!-- Filter Section -->
-    <div class="filter-section">
-      <div class="search-filters">
-        <div class="search-input">
-          <input
-            type="text"
-            v-model="nameFilter"
-            placeholder="Search by username..."
-            @input="filterUsers"
-          />
-        </div>
-        <div class="search-input">
-          <input
-            type="text"
-            v-model="emailFilter"
-            placeholder="Search by email..."
-            @input="filterUsers"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Button Section -->
-    <div class="action-section">
-      <button class="create-btn" @click="showCreateModal = true">
-        <font-awesome-icon :icon="['fas', 'plus']" /> Create User
-      </button>
-    </div>
-
-    <!-- Users Table -->
-    <div class="table-container">
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th @click="sortBy('username')" class="sortable">
-              <div class="th-content">
-                <span>Username</span>
-                <span class="sort-icons">
-                  <font-awesome-icon
-                    v-if="sortField === 'username' && sortOrder === 'asc'"
-                    :icon="['fas', 'sort-up']"
-                  />
-                  <font-awesome-icon
-                    v-else-if="sortField === 'username' && sortOrder === 'desc'"
-                    :icon="['fas', 'sort-down']"
-                  />
-                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
-                </span>
-              </div>
-            </th>
-            <th @click="sortBy('email')" class="sortable">
-              <div class="th-content">
-                <span>Email</span>
-                <span class="sort-icons">
-                  <font-awesome-icon
-                    v-if="sortField === 'email' && sortOrder === 'asc'"
-                    :icon="['fas', 'sort-up']"
-                  />
-                  <font-awesome-icon
-                    v-else-if="sortField === 'email' && sortOrder === 'desc'"
-                    :icon="['fas', 'sort-down']"
-                  />
-                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
-                </span>
-              </div>
-            </th>
-            <th @click="sortBy('role')" class="sortable">
-              <div class="th-content">
-                <span>Role</span>
-                <span class="sort-icons">
-                  <font-awesome-icon
-                    v-if="sortField === 'role' && sortOrder === 'asc'"
-                    :icon="['fas', 'sort-up']"
-                  />
-                  <font-awesome-icon
-                    v-else-if="sortField === 'role' && sortOrder === 'desc'"
-                    :icon="['fas', 'sort-down']"
-                  />
-                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
-                </span>
-              </div>
-            </th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in paginatedUsers" :key="user.email">
-            <td>{{ user.username }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              <span :class="['role-badge', user.role]">{{ user.role }}</span>
-            </td>
-            <td class="actions">
-              <button class="action-btn edit" @click="editUser(user)" title="Edit User">
-                <font-awesome-icon :icon="['fas', 'pen']" />
-              </button>
-              <button class="action-btn delete" @click="deleteUser(user)" title="Delete User">
-                <font-awesome-icon :icon="['fas', 'trash']" />
-              </button>
-            </td>
-          </tr>
-          <tr v-if="paginatedUsers.length === 0">
-            <td colspan="4" class="no-data">No users found</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    <div class="pagination" v-if="totalPages > 1">
-      <button
-        class="page-btn"
-        @click="prevPage"
-        :disabled="currentPage === 1"
-      >&lt;</button>
-      <button
-        v-for="pageNum in displayedPageNumbers"
-        :key="pageNum"
-        :class="['page-btn', { active: currentPage === pageNum }]"
-        @click="goToPage(pageNum)"
-      >
-        {{ pageNum }}
-      </button>
-      <button
-        class="page-btn"
-        @click="nextPage"
-        :disabled="currentPage === totalPages"
-      >&gt;</button>
-    </div>
-    <!-- Edit User Modal -->
-    <div v-if="showEditModal" class="modal-overlay">
-      <div class="modal-content">
-        <h2>Edit User</h2>
-        <div class="form-group">
-          <label>Username</label>
-          <input
-            type="text"
-            v-model="editingUser.username"
-            placeholder="Enter username"
-            :class="{ 'error': errors.username }"
-          />
-          <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input
-            type="email"
-            v-model="editingUser.email"
-            placeholder="Enter email"
-            :class="{ 'error': errors.email }"
-          />
-          <span class="error-message" v-if="errors.email">{{ errors.email }}</span>
-        </div>
-        <div class="form-group">
-          <label>Role</label>
-          <select 
-            v-model="editingUser.role"
-            :class="{ 'error': errors.role }"
-          >
-            <option value="">Select role</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
-          </select>
-          <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
-        </div>
-        <div class="modal-actions">
-          <button class="cancel-btn" @click="cancelEdit">Cancel</button>
-          <button class="confirm-btn" @click="confirmEdit">Confirm</button>
-        </div>
-      </div>
-    </div>
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay">
-      <div class="modal-content delete-modal">
-        <h2>Confirm Delete</h2>
-        <p class="delete-message">
-          Are you sure you want to delete user <span class="user-highlight">{{ userToDelete?.username }}</span>?
-          This action cannot be undone.
-        </p>
-        <div class="modal-actions">
-          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
-          <button class="delete-confirm-btn" @click="confirmDelete">Delete</button>
-        </div>
-      </div>
-    </div>
-    <!-- Create User Modal -->
-    <div v-if="showCreateModal" class="modal-overlay">
-      <div class="modal-content">
-        <h2>Create New User</h2>
-        <form @submit.prevent="handleSubmit">
-          <div class="form-group">
-            <label>Username</label>
-            <input 
-              type="text" 
-              v-model="newUser.username" 
-              placeholder="Enter username"
-              :class="{ 'error': errors.username }"
-              @input="validateField('username')"
-            />
-            <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input 
-              type="email" 
-              v-model="newUser.email" 
-              placeholder="Enter email"
-              :class="{ 'error': errors.email }"
-              @input="validateField('email')"
-            />
-            <span class="error-message" v-if="errors.email">{{ errors.email }}</span>
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="password-input">
-              <input 
-                :type="showPassword ? 'text' : 'password'"
-                v-model="newUser.password" 
-                placeholder="Enter password"
-                :class="{ 'error': errors.password }"
-                @input="validateField('password')"
-              />
-              <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
-                <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
-              </button>
-            </div>
-            <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <select 
-              v-model="newUser.role"
-              :class="{ 'error': errors.role }"
-              @change="validateField('role')"
-            >
-              <option value="">Select role</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="staff">Staff</option>
-            </select>
-            <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
-          </div>
-          <div class="modal-actions">
-            <button type="button" class="cancel-btn" @click="cancelCreate">Cancel</button>
-            <button type="submit" class="confirm-btn">Create</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
 import { ref, computed } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
@@ -285,7 +30,7 @@ const filteredUsers = computed(() => {
   filtered.sort((a, b) => {
     let fieldA = a[sortField.value]?.toLowerCase() ?? ''
     let fieldB = b[sortField.value]?.toLowerCase() ?? ''
-    
+
     if (sortOrder.value === 'asc') {
       return fieldA.localeCompare(fieldB)
     } else {
@@ -420,7 +165,7 @@ const confirmDelete = () => {
 
 const handleSubmit = (e) => {
   e.preventDefault()
-  
+
   // Validate all fields
   validateField('username')
   validateField('email')
@@ -545,6 +290,262 @@ const sortBy = (field) => {
 }
 </script>
 
+<template>
+  <div class="users-container">
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <div class="search-filters">
+        <div class="search-input">
+          <input
+            type="text"
+            v-model="nameFilter"
+            placeholder="Search by username..."
+            @input="filterUsers"
+          />
+        </div>
+        <div class="search-input">
+          <input
+            type="text"
+            v-model="emailFilter"
+            placeholder="Search by email..."
+            @input="filterUsers"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Button Section -->
+    <div class="action-section">
+      <button class="create-btn" @click="showCreateModal = true">
+        <font-awesome-icon :icon="['fas', 'plus']" class="create-icon" />
+        Create User
+      </button>
+    </div>
+
+    <!-- Users Table -->
+    <div class="table-container">
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th @click="sortBy('username')" class="sortable" :class="{ 'sorted-asc': sortField === 'username' && sortOrder === 'asc', 'sorted-desc': sortField === 'username' && sortOrder === 'desc' }">
+              <div class="th-content">
+                <span>Username</span>
+                <span class="sort-icons">
+                  <font-awesome-icon
+                    v-if="sortField === 'username' && sortOrder === 'asc'"
+                    :icon="['fas', 'sort-up']"
+                  />
+                  <font-awesome-icon
+                    v-else-if="sortField === 'username' && sortOrder === 'desc'"
+                    :icon="['fas', 'sort-down']"
+                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
+                </span>
+              </div>
+            </th>
+            <th @click="sortBy('email')" class="sortable" :class="{ 'sorted-asc': sortField === 'email' && sortOrder === 'asc', 'sorted-desc': sortField === 'email' && sortOrder === 'desc' }">
+              <div class="th-content">
+                <span>Email</span>
+                <span class="sort-icons">
+                  <font-awesome-icon
+                    v-if="sortField === 'email' && sortOrder === 'asc'"
+                    :icon="['fas', 'sort-up']"
+                  />
+                  <font-awesome-icon
+                    v-else-if="sortField === 'email' && sortOrder === 'desc'"
+                    :icon="['fas', 'sort-down']"
+                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
+                </span>
+              </div>
+            </th>
+            <th @click="sortBy('role')" class="sortable" :class="{ 'sorted-asc': sortField === 'role' && sortOrder === 'asc', 'sorted-desc': sortField === 'role' && sortOrder === 'desc' }">
+              <div class="th-content">
+                <span>Role</span>
+                <span class="sort-icons">
+                  <font-awesome-icon
+                    v-if="sortField === 'role' && sortOrder === 'asc'"
+                    :icon="['fas', 'sort-up']"
+                  />
+                  <font-awesome-icon
+                    v-else-if="sortField === 'role' && sortOrder === 'desc'"
+                    :icon="['fas', 'sort-down']"
+                  />
+                  <font-awesome-icon v-else :icon="['fas', 'sort']" />
+                </span>
+              </div>
+            </th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="user in paginatedUsers" :key="user.email">
+            <td>{{ user.username }}</td>
+            <td>{{ user.email }}</td>
+            <td>
+              <span :class="['role-badge', user.role]">{{ user.role }}</span>
+            </td>
+            <td class="actions">
+              <button class="action-btn edit" @click="editUser(user)" title="Edit User">
+                <font-awesome-icon :icon="['fas', 'pen']" />
+              </button>
+              <button class="action-btn delete" @click="deleteUser(user)" title="Delete User">
+                <font-awesome-icon :icon="['fas', 'trash']" />
+              </button>
+            </td>
+          </tr>
+          <tr v-if="paginatedUsers.length === 0">
+            <td colspan="4" class="no-data">No users found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" v-if="totalPages > 1">
+      <button
+        class="page-btn prev"
+        @click="prevPage"
+        :disabled="currentPage === 1"
+      >&lt;</button>
+      <button
+        v-for="pageNum in displayedPageNumbers"
+        :key="pageNum"
+        :class="['page-btn', { active: currentPage === pageNum }]"
+        @click="goToPage(pageNum)"
+      >
+        {{ pageNum }}
+      </button>
+      <button
+        class="page-btn next"
+        @click="nextPage"
+        :disabled="currentPage === totalPages"
+      >&gt;</button>
+    </div>
+    <!-- Edit User Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Edit User</h2>
+        <div class="form-group">
+          <label>Username</label>
+          <input
+            type="text"
+            v-model="editingUser.username"
+            placeholder="Enter username"
+            :class="{ 'error': errors.username }"
+          />
+          <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input
+            type="email"
+            v-model="editingUser.email"
+            placeholder="Enter email"
+            :class="{ 'error': errors.email }"
+          />
+          <span class="error-message" v-if="errors.email">{{ errors.email }}</span>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select
+            v-model="editingUser.role"
+            :class="{ 'error': errors.role }"
+          >
+            <option value="">Select role</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="staff">Staff</option>
+          </select>
+          <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
+        </div>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="cancelEdit">Cancel</button>
+          <button class="confirm-btn" @click="confirmEdit">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay">
+      <div class="modal-content delete-modal">
+        <h2>Confirm Delete</h2>
+        <p class="delete-message">
+          Are you sure you want to delete user <span class="user-highlight">{{ userToDelete?.username }}</span>?
+          This action cannot be undone.
+        </p>
+        <div class="modal-actions">
+          <button class="cancel-btn" @click="cancelDelete">Cancel</button>
+          <button class="delete-confirm-btn" @click="confirmDelete">Delete</button>
+        </div>
+      </div>
+    </div>
+    <!-- Create User Modal -->
+    <div v-if="showCreateModal" class="modal-overlay">
+      <div class="modal-content">
+        <h2>Create New User</h2>
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              v-model="newUser.username"
+              placeholder="Enter username"
+              :class="{ 'error': errors.username }"
+              @input="validateField('username')"
+            />
+            <span class="error-message" v-if="errors.username">{{ errors.username }}</span>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              v-model="newUser.email"
+              placeholder="Enter email"
+              :class="{ 'error': errors.email }"
+              @input="validateField('email')"
+            />
+            <span class="error-message" v-if="errors.email">{{ errors.email }}</span>
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="password-input">
+              <input
+                :type="showPassword ? 'text' : 'password'"
+                v-model="newUser.password"
+                placeholder="Enter password"
+                :class="{ 'error': errors.password }"
+                @input="validateField('password')"
+              />
+              <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
+                <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
+              </button>
+            </div>
+            <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select
+              v-model="newUser.role"
+              :class="{ 'error': errors.role }"
+              @change="validateField('role')"
+            >
+              <option value="">Select role</option>
+              <option value="admin">Admin</option>
+              <option value="manager">Manager</option>
+              <option value="staff">Staff</option>
+            </select>
+            <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="cancelCreate">Cancel</button>
+            <button type="submit" class="confirm-btn">Create</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
 <style scoped>
 .users-container {
   padding: 20px 40px;
@@ -609,14 +610,48 @@ const sortBy = (field) => {
 }
 
 .users-table th {
-  background-color: #8D6E63;
-  color: white;
-  font-weight: 500;
-  font-size: 15px;
-  white-space: nowrap;
-  text-align: left;
   padding: 12px 16px;
-  border-bottom: 1px solid #ddd;
+  text-align: left;
+  font-weight: 600;
+  color: #5D4037;
+  border-bottom: 2px solid #8D6E63;
+  background-color: #FFF8F6;
+  transition: all 0.2s ease;
+}
+
+.users-table th.sortable {
+  cursor: pointer;
+}
+
+.users-table th.sortable:hover {
+  background-color: #F3E5DC;
+  color: #3E2723;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+}
+
+.sort-icons {
+  display: flex;
+  align-items: center;
+  color: #8D6E63;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.users-table th.sortable:hover .sort-icons {
+  opacity: 1;
+  color: #5D4037;
+}
+
+.users-table tbody tr:hover {
+  background-color: #FFF8F6;
 }
 
 .users-table tr:hover {
@@ -714,18 +749,37 @@ const sortBy = (field) => {
 .pagination {
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 8px;
   margin-top: 20px;
 }
 
 .page-btn {
-  padding: 8px 15px;
-  border: 1px solid #D7CCC8;
-  background-color: white;
-  color: #5D4037;
+  background: none;
+  border: 1px solid #8D6E63;
+  color: #8D6E63;
+  padding: 8px 12px;
+  border-radius: 4px;
   cursor: pointer;
-  border-radius: 5px;
-  transition: all 0.3s ease;
+  font-size: 14px;
+  min-width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: #8D6E63;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(141, 110, 99, 0.2);
+}
+
+.page-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .page-btn.active {
@@ -734,157 +788,35 @@ const sortBy = (field) => {
   border-color: #8D6E63;
 }
 
-.page-btn:hover:not(:disabled) {
-  background-color: #8D6E63;
-  color: white;
-  border-color: #8D6E63;
-}
-
 .page-btn:disabled {
-  background-color: #F5F5F5;
-  color: #9E9E9E;
+  border-color: #D7CCC8;
+  color: #D7CCC8;
   cursor: not-allowed;
 }
 
-.action-section {
-  margin: 20px 0;
-  display: flex;
-  justify-content: flex-end;
+.page-btn.prev,
+.page-btn.next {
+  font-weight: bold;
+  padding: 8px 16px;
 }
 
-.create-btn {
-  background-color: #8D6E63;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-  color: white;
-}
-
-.create-btn:hover {
-  background-color: #6D4C41;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(141, 110, 99, 0.2);
-}
-
-.create-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
-.error-summary,
-.error-header,
-.error-summary ul,
-.error-summary li,
-.field-error,
-.error-input {
-  display: none;
-}
-
-.password-input {
-  position: relative;
-}
-
-.visibility-toggle {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  color: #8d6e63;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-}
-
-.visibility-toggle:hover {
-  color: #5d4037;
-}
-
-input[type="text"],
-input[type="email"],
-input[type="password"] {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #8D6E63;
-  border-radius: 4px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-input[type="password"] {
-  padding-right: 40px;
-}
-
-input.error {
-  border-color: #D32F2F;
-  background-color: #FFF3F3;
-}
-
-.error-message {
-  color: #D32F2F;
-  font-size: 0.85rem;
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.sortable {
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s ease;
-  padding: 12px 16px !important;
-}
-
-.sortable:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.th-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px;
-}
-
-.sort-icons {
-  display: flex;
-  align-items: center;
-  color: #ffffff;
-  width: 16px;
-  justify-content: center;
-  opacity: 0.7;
-}
-
-.sortable:hover .sort-icons {
+.users-table th[class*="sorted-"] .sort-icons {
+  color: #5D4037;
   opacity: 1;
 }
 
 .fa-sort-up, .fa-sort-down {
-  color: #ffffff;
+  color: #8D6E63;
 }
 
 .fa-sort {
-  opacity: 0.7;
-  color: #ffffff;
+  opacity: 0.8;
+  color: #8D6E63;
 }
 
-.sortable:hover .fa-sort {
+.users-table th.sortable:hover .fa-sort {
   opacity: 1;
+  color: #5D4037;
 }
 
 /* Modal Styles */
@@ -1069,5 +1001,50 @@ input.error {
 .delete-confirm-btn:active {
   transform: translateY(0);
   box-shadow: none;
+}
+
+.action-section {
+  margin: 20px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: transparent;
+  color: #8D6E63;
+  border: 2px solid #8D6E63;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.create-btn:hover {
+  background-color: #8D6E63;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(141, 110, 99, 0.2);
+}
+
+.create-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.create-icon {
+  font-size: 0.9em;
+  transition: transform 0.3s ease;
+}
+
+.create-btn:hover .create-icon {
+  transform: rotate(90deg);
 }
 </style>
