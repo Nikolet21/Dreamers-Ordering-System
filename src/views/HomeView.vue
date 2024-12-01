@@ -92,7 +92,7 @@ const placeOrder = () => {
     }))
   }
   userStore.addPendingOrder(order)
-  
+
   currentReceipt.value = receipt
   showReceipt.value = true
   clearCart()
@@ -226,7 +226,7 @@ const handleProfileUpdate = (profileData) => {
           <p><strong>Order #:</strong> {{ currentReceipt.orderNumber }}</p>
           <p><strong>Date:</strong> {{ currentReceipt.orderDate }}</p>
           <p><strong>Customer:</strong> {{ currentReceipt.customerName }}</p>
-          
+
           <div class="receipt-items">
             <div v-for="item in currentReceipt.items" :key="item.name" class="receipt-item">
               <div class="item-details">
@@ -239,7 +239,7 @@ const handleProfileUpdate = (profileData) => {
               </div>
             </div>
           </div>
-          
+
           <div class="receipt-total">
             <strong>Total Amount:</strong>
             <span>₱{{ currentReceipt.total.toFixed(2) }}</span>
@@ -423,76 +423,51 @@ const handleProfileUpdate = (profileData) => {
     display: flex;
   }
 
-  .right-buttons {
-    gap: 12px;
-  }
-
   .nav-links {
     position: fixed;
-    top: 60px;
+    top: 0;
     right: -100%;
-    width: 100%;
-    height: calc(100vh - 60px);
-    background-color: #fff;
+    width: 280px;
+    height: 100vh;
+    background-color: #3E2723;
     flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 2rem;
-    gap: 2rem;
-    transition: right 0.3s ease;
-  }
-
-  .nav-links li {
-    width: 100%;
-    text-align: center;
-  }
-
-  .nav-links a {
-    display: block;
-    font-size: 1.2rem;
-    padding: 1rem;
-    width: 100%;
-  }
-
-  .nav-links a::after {
-    bottom: 0;
+    align-items: flex-start;
+    padding: 90px 25px 30px;
+    gap: 1.5rem;
+    transition: all 0.3s ease-in-out;
+    box-shadow: -2px 0 15px rgba(0, 0, 0, 0.2);
   }
 
   .nav-links.active {
     right: 0;
   }
 
-  .nav-links a {
-    font-size: 1.2rem;
-    padding: 1rem;
+  .nav-links li {
     width: 100%;
-    text-align: center;
   }
 
-  .signin-button {
-    padding: 0.4rem 1.2rem;
-    font-size: 1rem;
+  .nav-links a {
+    display: block;
+    padding: 12px 15px;
+    width: 100%;
+    text-align: left;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
   }
 
-  .logo span {
-    font-size: 1.2rem;
+  .nav-links a:hover {
+    background-color: #8b5e3c;
+    padding-left: 20px;
   }
 
-  .logo-image {
-    height: 35px;
-    margin-right: 15px;
+  .nav-links a.selected {
+    background-color: #8b5e3c;
+    color: white;
   }
 
-  .hamburger.active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-  }
-
-  .hamburger.active span:nth-child(2) {
-    opacity: 0;
-  }
-
-  .hamburger.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(7px, -6px);
+  .nav-links a::after {
+    display: none;
   }
 }
 
