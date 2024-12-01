@@ -2,6 +2,10 @@
 import { ref, computed } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useUserStore } from '@/stores/userStore'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faUserCircle } from '@fortawesome/free-solid-svg-icons'
+
+library.add(faUserCircle)
 
 const userStore = useUserStore()
 
@@ -157,7 +161,7 @@ const submitProductReview = () => {
   // Create new review object
   const newReview = {
     id: generateId(),
-    username: userStore.username,
+    username: userStore.isLoggedIn ? userStore.username : 'Anonymous',
     rating: productRating.value,
     productName: selectedProduct.value,
     description: productFeedback.value,
