@@ -10,6 +10,7 @@ library.add(faPen, faTrash, faSort, faSortUp, faSortDown, faPlus, faEye, faEyeSl
 const userStore = useUserStore()
 const nameFilter = ref('')
 const emailFilter = ref('')
+const roleFilter = ref('')
 const sortField = ref('username')
 const sortOrder = ref('asc')
 const currentPage = ref(1)
@@ -23,7 +24,8 @@ const filteredUsers = computed(() => {
   let filtered = accounts.value.filter(user => {
     const matchName = user.username.toLowerCase().includes(nameFilter.value.toLowerCase())
     const matchEmail = user.email.toLowerCase().includes(emailFilter.value.toLowerCase())
-    return matchName && matchEmail
+    const matchRole = !roleFilter.value || user.role === roleFilter.value
+    return matchName && matchEmail && matchRole
   })
 
   // Apply sorting
@@ -311,6 +313,19 @@ const sortBy = (field) => {
             @input="filterUsers"
           />
         </div>
+        <div class="role-filter">
+          <select
+            v-model="roleFilter"
+            @change="filterUsers"
+            class="role-select"
+          >
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="staff">Staff</option>
+            <option value="user">User</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -516,8 +531,16 @@ const sortBy = (field) => {
                 :class="{ 'error': errors.password }"
                 @input="validateField('password')"
               />
-              <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
-                <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
+              <button 
+                type="button"
+                class="visibility-toggle"
+                @click="togglePasswordVisibility"
+                :title="showPassword ? 'Hide password' : 'Show password'"
+              >
+                <font-awesome-icon
+                  :icon="['fas', showPassword ? 'eye-slash' : 'eye']"
+                  class="visibility-icon"
+                />
               </button>
             </div>
             <span class="error-message" v-if="errors.password">{{ errors.password }}</span>
@@ -555,37 +578,65 @@ const sortBy = (field) => {
 }
 
 .filter-section {
-  margin-bottom: 25px;
-  background-color: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .search-filters {
   display: flex;
-  gap: 20px;
+  gap: 16px;
+  align-items: center;
   flex-wrap: wrap;
 }
 
 .search-input {
   flex: 1;
-  min-width: 300px;
+  min-width: 200px;
 }
 
 .search-input input {
   width: 100%;
-  padding: 12px 20px;
-  border: 1px solid #D7CCC8;
-  border-radius: 5px;
-  font-size: 15px;
-  transition: border-color 0.3s ease;
+  padding: 8px 12px;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
 }
 
 .search-input input:focus {
   outline: none;
-  border-color: #8D6E63;
-  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.1);
+  border-color: #5D4037;
+  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.2);
+}
+
+.role-filter {
+  min-width: 150px;
+}
+
+.role-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  background-color: white;
+  cursor: pointer;
+  color: #5D4037;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238D6E63' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.role-select:focus {
+  outline: none;
+  border-color: #5D4037;
+  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.2);
+}
+
+.role-select option {
+  color: #5D4037;
   background-color: white;
 }
 
@@ -1046,5 +1097,66 @@ const sortBy = (field) => {
 
 .create-btn:hover .create-icon {
   transform: rotate(90deg);
+}
+
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  width: 100%;
+  padding: 8px 12px;
+  padding-right: 40px;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  color: #5D4037;
+}
+
+.password-input input:focus {
+  outline: none;
+  border-color: #5D4037;
+  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.1);
+}
+
+.visibility-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #8D6E63;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.visibility-toggle:hover {
+  color: #5D4037;
+  background-color: rgba(141, 110, 99, 0.1);
+}
+
+.visibility-toggle:active {
+  transform: scale(0.95);
+}
+
+.visibility-icon {
+  font-size: 1.1rem;
+  transition: all 0.2s ease;
+}
+
+.visibility-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(141, 110, 99, 0.1);
+}
+
+.visibility-toggle:focus:not(:focus-visible) {
+  box-shadow: none;
 }
 </style>
