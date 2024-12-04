@@ -1,18 +1,45 @@
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
+import { ref, defineAsyncComponent, defineEmits } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
+
 const OrderingModal = defineAsyncComponent(() => import('../components/OrderingModal.vue'))
 
+const router = useRouter()
+const userStore = useUserStore()
+
 const isOrderingModalOpen = ref(false)
+const isLoginWarningOpen = ref(false)
 const selectedProduct = ref(null)
 
 const openOrderingModal = (product) => {
-  selectedProduct.value = product
-  isOrderingModalOpen.value = true
+  if (!userStore.isLoggedIn) {
+    selectedProduct.value = product
+    isLoginWarningOpen.value = true
+  } else {
+    selectedProduct.value = product
+    isOrderingModalOpen.value = true
+  }
 }
 
 const closeOrderingModal = () => {
   isOrderingModalOpen.value = false
   selectedProduct.value = null
+}
+
+const closeLoginWarning = () => {
+  isLoginWarningOpen.value = false
+  selectedProduct.value = null
+}
+
+const navigateToLogin = () => {
+  router.push('/signin')
+}
+
+const emit = defineEmits(['addToCart'])
+
+const handleOrderSubmit = (orderDetails) => {
+  emit('addToCart', orderDetails)
 }
 
 const coffees = [
@@ -81,10 +108,23 @@ const coffees = [
     </section>
 
     <OrderingModal
-      :isOpen="isOrderingModalOpen"
+      v-if="isOrderingModalOpen"
+      :is-open="isOrderingModalOpen"
       :product="selectedProduct"
       @close="closeOrderingModal"
+      @submit="handleOrderSubmit"
     />
+
+    <div v-if="isLoginWarningOpen" class="modal-overlay">
+      <div class="warning-modal">
+        <h3>Login Required</h3>
+        <p>You need to log in to place an order.</p>
+        <div class="warning-buttons">
+          <button class="login-button" @click="navigateToLogin">Log In Now</button>
+          <button class="cancel-button" @click="closeLoginWarning">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -194,6 +234,73 @@ const coffees = [
 
 .order-btn:hover {
   background-color: #6b4423;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.warning-modal {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.warning-modal h3 {
+  color: #5d4037;
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+}
+
+.warning-modal p {
+  color: #795548;
+  margin-bottom: 1.5rem;
+}
+
+.warning-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.login-button, .cancel-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.login-button {
+  background-color: #8b5e3c;
+  color: white;
+}
+
+.login-button:hover {
+  background-color: #6d4b2f;
+}
+
+.cancel-button {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+.cancel-button:hover {
+  background-color: #d0d0d0;
 }
 
 @media (max-width: 768px) {

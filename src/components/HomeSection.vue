@@ -1,3 +1,20 @@
+<script setup>
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/userStore'
+
+const router = useRouter()
+const userStore = useUserStore()
+const emit = defineEmits(['showProducts'])
+
+const handleOrderClick = () => {
+  if (userStore.isLoggedIn) {
+    emit('showProducts')
+  } else {
+    router.push('/signin')
+  }
+}
+</script>
+
 <template>
   <section class="home-section">
     <div class="home-container">
@@ -17,7 +34,9 @@
           unforgettable coffee experience. Each cup is crafted with passion and precision, ensuring
           moments of pure coffee bliss.
         </p>
-        <button class="order-button">Order Now</button>
+        <button class="order-button" @click="handleOrderClick">
+          {{ userStore.isLoggedIn ? 'Order Now' : 'Sign In to Order' }}
+        </button>
       </div>
     </div>
   </section>
@@ -29,6 +48,7 @@
   display: flex;
   align-items: center;
   padding: 2rem;
+  margin-top: 3rem;
 }
 
 .home-container {
