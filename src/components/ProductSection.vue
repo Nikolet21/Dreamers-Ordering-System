@@ -276,7 +276,8 @@ const coffees = [
   justify-content: center;
 }
 
-.login-button, .cancel-button {
+.login-button,
+.cancel-button {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;
