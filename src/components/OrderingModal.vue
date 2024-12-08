@@ -21,8 +21,6 @@ const quantityError = ref('')
 // Define size prices
 const sizePrices = {
   small: 37.0,
-  medium: 50.0,
-  large: 65.0,
 }
 
 // Calculate total price
@@ -87,17 +85,10 @@ watch(quantity, validateQuantity)
               <h4>Select Size:</h4>
               <div class="size-options">
                 <label class="radio-label">
-                  <input type="radio" v-model="selectedSize" value="small" name="size" />
+                  <input type="radio" v-model="selectedSize" value="small" name="size" checked />
                   <span class="radio-text">Small (₱37.00)</span>
                 </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="selectedSize" value="medium" name="size" />
-                  <span class="radio-text">Medium (₱50.00)</span>
-                </label>
-                <label class="radio-label">
-                  <input type="radio" v-model="selectedSize" value="large" name="size" />
-                  <span class="radio-text">Large (₱65.00)</span>
-                </label>
+                <p class="coming-soon">More sizes coming soon!</p>
               </div>
             </div>
 
