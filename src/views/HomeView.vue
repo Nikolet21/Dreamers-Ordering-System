@@ -14,7 +14,6 @@ const userStore = useUserStore()
 const Products = defineAsyncComponent(() => import('../components/ProductSection.vue'))
 const Home = defineAsyncComponent(() => import('../components/HomeSection.vue'))
 const About = defineAsyncComponent(() => import('../components/AboutSection.vue'))
-const Facility = defineAsyncComponent(() => import('../components/FacilitySection.vue'))
 const Review = defineAsyncComponent(() => import('../components/ReviewSection.vue'))
 const currentView = ref('Home')
 const isMenuOpen = ref(false)
@@ -181,7 +180,6 @@ const handleProfileUpdate = (profileData) => {
         <li><a href="#" @click="setView('Home'); closeMenu()" :class="{ 'selected': currentView === 'Home' }">Home</a></li>
         <li><a href="#" @click="setView('About'); closeMenu()" :class="{ 'selected': currentView === 'About' }">About</a></li>
         <li><a href="#" @click="setView('Product'); closeMenu()" :class="{ 'selected': currentView === 'Product' }">Products</a></li>
-        <li><a href="#" @click="setView('Facility'); closeMenu()" :class="{ 'selected': currentView === 'Facility' }">Facility</a></li>
         <li><a href="#" @click="setView('Review'); closeMenu()" :class="{ 'selected': currentView === 'Review' }">Review</a></li>
       </ul>
 
@@ -252,7 +250,6 @@ const handleProfileUpdate = (profileData) => {
         :is="currentView === 'Home' ? Home :
             currentView === 'Product' ? Products :
             currentView === 'About' ? About :
-            currentView === 'Facility' ? Facility :
             currentView === 'Review' ? Review : null"
         @showProducts="setView('Product')"
         @add-to-cart="addToCart"
