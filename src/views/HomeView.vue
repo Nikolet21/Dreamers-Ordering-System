@@ -24,6 +24,8 @@ const isProfileModalOpen = ref(false);
 const cartItems = ref([])
 const showReceipt = ref(false)
 const currentReceipt = ref(null)
+const cartErrorMessage = ref('')
+const showCartError = ref(false)
 
 const setView = (view) => (currentView.value = view)
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value)
@@ -47,15 +49,55 @@ const addToCart = (item) => {
     cartItem => cartItem.name === item.name && cartItem.size === item.size
   )
 
+  if (existingItemIndex === -1 && cartItems.value.length >= 3) {
+    cartErrorMessage.value = 'Cart limited to 3 products'
+    showCartError.value = true
+    hideCartError()
+    return
+  }
+
   if (existingItemIndex !== -1) {
-    // If item exists, update quantity and total price
     const existingItem = cartItems.value[existingItemIndex]
+    if (existingItem.quantity + item.quantity > 10) {
+      cartErrorMessage.value = 'Maximum of 10 per product allowed'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
+    // Calculate total excluding the current item's existing quantity
+    const newTotal = cartItems.value.reduce((sum, cartItem) =>
+      cartItem === existingItem ? sum : sum + cartItem.quantity, 0) + (existingItem.quantity + item.quantity)
+    if (newTotal > 30) {
+      cartErrorMessage.value = 'Maximum of 30 items allowed in cart'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
     existingItem.quantity += item.quantity
     existingItem.totalPrice = existingItem.price * existingItem.quantity
   } else {
-    // If item doesn't exist, add it to cart
+    if (item.quantity > 10) {
+      cartErrorMessage.value = 'Maximum of 10 per product allowed'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
+    const newTotal = cartItems.value.reduce((sum, cartItem) => sum + cartItem.quantity, 0) + item.quantity
+    if (newTotal > 30) {
+      cartErrorMessage.value = 'Maximum total of 30 items allowed in cart'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
     cartItems.value.push(item)
   }
+}
+
+const hideCartError = () => {
+  setTimeout(() => {
+    showCartError.value = false
+    cartErrorMessage.value = ''
+  }, 3000)
 }
 
 const clearCart = () => {
@@ -175,6 +217,9 @@ const handleProfileUpdate = (profileData) => {
                 <button @click="placeOrder" class="place-order">Place Order</button>
               </div>
             </div>
+          </div>
+          <div v-if="showCartError" class="error-message">
+            {{ cartErrorMessage }}
           </div>
         </div>
         <template v-if="userStore.isLoggedIn">
@@ -415,6 +460,31 @@ const handleProfileUpdate = (profileData) => {
   height: 3px;
   background-color: #FFFFFF;
   transition: all 0.3s ease;
+}
+
+.error-message {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  background-color: #ef5350;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease-out;
+  font-weight: 500;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Mobile Styles */
