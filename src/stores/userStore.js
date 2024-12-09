@@ -6,12 +6,13 @@ export const useUserStore = defineStore('user', {
     user: null,
     isAuthenticated: false,
     mockAccounts: [
-      { username: 'test', email: 'test@gmail.com', password: 'Password123!', role: 'user' },
-      { username: 'user', email: 'user@gmail.com', password: 'User@2024', role: 'user' },
-      { username: 'admin', email: 'admin@gmail.com', password: 'Admin@2024', role: 'admin' },
-      { username: 'staff', email: 'staff@gmail.com', password: 'Staff@2024', role: 'staff' },
-      { username: 'manager', email: 'manager@gmail.com', password: 'Manager@2024', role: 'manager' }
+      { id: 1, username: 'test', email: 'test@gmail.com', password: 'Password123!', role: 'user' },
+      { id: 2, username: 'user', email: 'user@gmail.com', password: 'User@2024', role: 'user' },
+      { id: 3, username: 'admin', email: 'admin@gmail.com', password: 'Admin@2024', role: 'admin' },
+      { id: 4, username: 'staff', email: 'staff@gmail.com', password: 'Staff@2024', role: 'staff' },
+      { id: 5, username: 'manager', email: 'manager@gmail.com', password: 'Manager@2024', role: 'manager' }
     ],
+    nextId: 6,  // Track the next available ID
     pendingOrders: []
   }),
 
@@ -115,11 +116,30 @@ export const useUserStore = defineStore('user', {
     },
 
     updateOrderStatus(orderId, newStatus) {
-      const index = this.pendingOrders.findIndex(order => order.id === orderId)
-      if (index !== -1) {
-        this.pendingOrders[index].status = newStatus
-        this.persistUserData()
+      const order = this.pendingOrders.find(o => o.id === orderId)
+      if (order) {
+        order.status = newStatus
       }
+    },
+
+    deleteAccount(accountId) {
+      console.log('Deleting account with ID:', accountId)  // Debug log
+      const index = this.mockAccounts.findIndex(account => account.id === accountId)
+      console.log('Found at index:', index)  // Debug log
+      if (index !== -1) {
+        const deletedAccount = this.mockAccounts[index]
+        console.log('Account to be deleted:', deletedAccount)  // Debug log
+        this.mockAccounts.splice(index, 1)
+        this.persistUserData()
+        return true
+      }
+      return false
+    },
+
+    getNextId() {
+      const nextId = this.nextId
+      this.nextId++
+      return nextId
     }
   }
 })

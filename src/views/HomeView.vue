@@ -14,7 +14,6 @@ const userStore = useUserStore()
 const Products = defineAsyncComponent(() => import('../components/ProductSection.vue'))
 const Home = defineAsyncComponent(() => import('../components/HomeSection.vue'))
 const About = defineAsyncComponent(() => import('../components/AboutSection.vue'))
-const Facility = defineAsyncComponent(() => import('../components/FacilitySection.vue'))
 const Review = defineAsyncComponent(() => import('../components/ReviewSection.vue'))
 const currentView = ref('Home')
 const isMenuOpen = ref(false)
@@ -24,6 +23,8 @@ const isProfileModalOpen = ref(false);
 const cartItems = ref([])
 const showReceipt = ref(false)
 const currentReceipt = ref(null)
+const cartErrorMessage = ref('')
+const showCartError = ref(false)
 
 const setView = (view) => (currentView.value = view)
 const toggleMenu = () => (isMenuOpen.value = !isMenuOpen.value)
@@ -47,15 +48,55 @@ const addToCart = (item) => {
     cartItem => cartItem.name === item.name && cartItem.size === item.size
   )
 
+  if (existingItemIndex === -1 && cartItems.value.length >= 3) {
+    cartErrorMessage.value = 'Cart limited to 3 products'
+    showCartError.value = true
+    hideCartError()
+    return
+  }
+
   if (existingItemIndex !== -1) {
-    // If item exists, update quantity and total price
     const existingItem = cartItems.value[existingItemIndex]
+    if (existingItem.quantity + item.quantity > 10) {
+      cartErrorMessage.value = 'Maximum of 10 per product allowed'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
+    // Calculate total excluding the current item's existing quantity
+    const newTotal = cartItems.value.reduce((sum, cartItem) =>
+      cartItem === existingItem ? sum : sum + cartItem.quantity, 0) + (existingItem.quantity + item.quantity)
+    if (newTotal > 30) {
+      cartErrorMessage.value = 'Maximum of 30 items allowed in cart'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
     existingItem.quantity += item.quantity
     existingItem.totalPrice = existingItem.price * existingItem.quantity
   } else {
-    // If item doesn't exist, add it to cart
+    if (item.quantity > 10) {
+      cartErrorMessage.value = 'Maximum of 10 per product allowed'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
+    const newTotal = cartItems.value.reduce((sum, cartItem) => sum + cartItem.quantity, 0) + item.quantity
+    if (newTotal > 30) {
+      cartErrorMessage.value = 'Maximum total of 30 items allowed in cart'
+      showCartError.value = true
+      hideCartError()
+      return
+    }
     cartItems.value.push(item)
   }
+}
+
+const hideCartError = () => {
+  setTimeout(() => {
+    showCartError.value = false
+    cartErrorMessage.value = ''
+  }, 3000)
 }
 
 const clearCart = () => {
@@ -139,7 +180,6 @@ const handleProfileUpdate = (profileData) => {
         <li><a href="#" @click="setView('Home'); closeMenu()" :class="{ 'selected': currentView === 'Home' }">Home</a></li>
         <li><a href="#" @click="setView('About'); closeMenu()" :class="{ 'selected': currentView === 'About' }">About</a></li>
         <li><a href="#" @click="setView('Product'); closeMenu()" :class="{ 'selected': currentView === 'Product' }">Products</a></li>
-        <li><a href="#" @click="setView('Facility'); closeMenu()" :class="{ 'selected': currentView === 'Facility' }">Facility</a></li>
         <li><a href="#" @click="setView('Review'); closeMenu()" :class="{ 'selected': currentView === 'Review' }">Review</a></li>
       </ul>
 
@@ -176,6 +216,9 @@ const handleProfileUpdate = (profileData) => {
               </div>
             </div>
           </div>
+          <div v-if="showCartError" class="error-message">
+            {{ cartErrorMessage }}
+          </div>
         </div>
         <template v-if="userStore.isLoggedIn">
           <div class="profile-dropdown">
@@ -207,7 +250,6 @@ const handleProfileUpdate = (profileData) => {
         :is="currentView === 'Home' ? Home :
             currentView === 'Product' ? Products :
             currentView === 'About' ? About :
-            currentView === 'Facility' ? Facility :
             currentView === 'Review' ? Review : null"
         @showProducts="setView('Product')"
         @add-to-cart="addToCart"
@@ -415,6 +457,31 @@ const handleProfileUpdate = (profileData) => {
   height: 3px;
   background-color: #FFFFFF;
   transition: all 0.3s ease;
+}
+
+.error-message {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  background-color: #ef5350;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: slideIn 0.3s ease-out;
+  font-weight: 500;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Mobile Styles */

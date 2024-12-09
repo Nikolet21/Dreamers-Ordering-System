@@ -48,7 +48,7 @@ const coffees = [
     name: 'Milky Strawberry',
     description: 'Sweet and creamy strawberry milk with a hint of richness.',
     price: 37.0,
-    image: 'src/assets/milkstrawberry.jpg',
+    image: 'src/assets/milky.jpg',
   },
   {
     id: 2,
@@ -276,7 +276,8 @@ const coffees = [
   justify-content: center;
 }
 
-.login-button, .cancel-button {
+.login-button,
+.cancel-button {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 4px;

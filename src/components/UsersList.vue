@@ -15,30 +15,44 @@ const sortField = ref('username')
 const sortOrder = ref('asc')
 const currentPage = ref(1)
 const itemsPerPage = 5
+const deleteError = ref('')
+const showDeleteError = ref(false)
+
+const showError = (message) => {
+  deleteError.value = message
+  showDeleteError.value = true
+  setTimeout(() => {
+    showDeleteError.value = false
+    deleteError.value = ''
+  }, 3000)
+}
 
 // Get accounts from store
 const accounts = computed(() => userStore.accounts)
 
 // Filtered and sorted users
 const filteredUsers = computed(() => {
-  let filtered = accounts.value.filter(user => {
+  // Create a new array to avoid modifying the original
+  let filtered = [...accounts.value].filter(user => {
     const matchName = user.username.toLowerCase().includes(nameFilter.value.toLowerCase())
     const matchEmail = user.email.toLowerCase().includes(emailFilter.value.toLowerCase())
     const matchRole = !roleFilter.value || user.role === roleFilter.value
     return matchName && matchEmail && matchRole
   })
 
-  // Apply sorting
-  filtered.sort((a, b) => {
-    let fieldA = a[sortField.value]?.toLowerCase() ?? ''
-    let fieldB = b[sortField.value]?.toLowerCase() ?? ''
+  // Apply sorting only if a sort field is selected
+  if (sortField.value) {
+    filtered.sort((a, b) => {
+      let fieldA = a[sortField.value]?.toLowerCase() ?? ''
+      let fieldB = b[sortField.value]?.toLowerCase() ?? ''
 
-    if (sortOrder.value === 'asc') {
-      return fieldA.localeCompare(fieldB)
-    } else {
-      return fieldB.localeCompare(fieldA)
-    }
-  })
+      if (sortOrder.value === 'asc') {
+        return fieldA.localeCompare(fieldB)
+      } else {
+        return fieldB.localeCompare(fieldA)
+      }
+    })
+  }
 
   return filtered
 })
@@ -147,20 +161,41 @@ const validateForm = () => {
 }
 
 const deleteUser = (user) => {
-  userToDelete.value = user
+  if (user.role === 'admin') {
+    showError('Admin account cannot be deleted')
+    return
+  }
+  // Create a complete copy of the user object with ID
+  userToDelete.value = {
+    id: user.id,            // Make sure to include the ID
+    username: user.username,
+    email: user.email,
+    role: user.role
+  }
+  console.log('Selected user for deletion:', userToDelete.value)  // Debug log
   showDeleteModal.value = true
 }
 
-const cancelDelete = () => {
+const confirmDelete = () => {
+  if (!userToDelete.value || userToDelete.value.role === 'admin') {
+    showError('Cannot delete this account')
+    showDeleteModal.value = false
+    userToDelete.value = null
+    return
+  }
+
+  console.log('Attempting to delete user:', userToDelete.value)  // Debug log
+  const success = userStore.deleteAccount(userToDelete.value.id)
+
+  if (!success) {
+    showError('Failed to delete account')
+  }
+
   showDeleteModal.value = false
   userToDelete.value = null
 }
 
-const confirmDelete = () => {
-  const index = accounts.value.findIndex(u => u.id === userToDelete.value.id)
-  if (index !== -1) {
-    accounts.value.splice(index, 1)
-  }
+const cancelDelete = () => {
   showDeleteModal.value = false
   userToDelete.value = null
 }
@@ -294,6 +329,9 @@ const sortBy = (field) => {
 
 <template>
   <div class="users-container">
+    <div v-if="showDeleteError" class="error-message">
+      {{ deleteError }}
+    </div>
     <!-- Filter Section -->
     <div class="filter-section">
       <div class="search-filters">
@@ -394,7 +432,7 @@ const sortBy = (field) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in paginatedUsers" :key="user.email">
+          <tr v-for="user in paginatedUsers" :key="user.id">
             <td>{{ user.username }}</td>
             <td>{{ user.email }}</td>
             <td>
@@ -531,7 +569,7 @@ const sortBy = (field) => {
                 :class="{ 'error': errors.password }"
                 @input="validateField('password')"
               />
-              <button 
+              <button
                 type="button"
                 class="visibility-toggle"
                 @click="togglePasswordVisibility"
@@ -575,6 +613,29 @@ const sortBy = (field) => {
   width: 95%;
   margin: 0 auto;
   background-color: #F5F5F5;
+}
+
+.error-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #fc0000;
+  color: rgb(255, 255, 255);
+  padding: 10px 20px;
+  border-radius: 4px;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .filter-section {

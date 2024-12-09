@@ -21,8 +21,6 @@ const quantityError = ref('')
 // Define size prices
 const sizePrices = {
   small: 37.0,
-  medium: 50.0,
-  large: 65.0,
 }
 
 // Calculate total price
@@ -56,7 +54,7 @@ const submitOrder = () => {
       quantity: quantity.value,
       price: sizePrices[selectedSize.value],
       totalPrice: totalPrice.value,
-      image: props.product.image
+      image: props.product.image,
     }
     emit('submit', orderDetails)
     closeModal()
@@ -87,43 +85,17 @@ watch(quantity, validateQuantity)
               <h4>Select Size:</h4>
               <div class="size-options">
                 <label class="radio-label">
-                  <input
-                    type="radio"
-                    v-model="selectedSize"
-                    value="small"
-                    name="size"
-                  />
+                  <input type="radio" v-model="selectedSize" value="small" name="size" checked />
                   <span class="radio-text">Small (₱37.00)</span>
                 </label>
-                <label class="radio-label">
-                  <input
-                    type="radio"
-                    v-model="selectedSize"
-                    value="medium"
-                    name="size"
-                  />
-                  <span class="radio-text">Medium (₱50.00)</span>
-                </label>
-                <label class="radio-label">
-                  <input
-                    type="radio"
-                    v-model="selectedSize"
-                    value="large"
-                    name="size"
-                  />
-                  <span class="radio-text">Large (₱65.00)</span>
-                </label>
+                <p class="coming-soon">More sizes coming soon!</p>
               </div>
             </div>
 
             <div class="form-group">
               <h4>Quantity:</h4>
               <div class="quantity-input">
-                <button
-                  class="quantity-btn"
-                  @click="quantity--"
-                  :disabled="quantity <= 1"
-                >
+                <button class="quantity-btn" @click="quantity--" :disabled="quantity <= 1">
                   -
                 </button>
                 <input
@@ -133,11 +105,7 @@ watch(quantity, validateQuantity)
                   max="10"
                   class="quantity-field"
                 />
-                <button
-                  class="quantity-btn"
-                  @click="quantity++"
-                  :disabled="quantity >= 10"
-                >
+                <button class="quantity-btn" @click="quantity++" :disabled="quantity >= 10">
                   +
                 </button>
               </div>
@@ -151,7 +119,7 @@ watch(quantity, validateQuantity)
 
             <div class="button-group">
               <button class="cancel-button" @click="closeModal">Cancel</button>
-              <button class="submit-button" @click="submitOrder">Place Order</button>
+              <button class="submit-button" @click="submitOrder">Add to Cart</button>
             </div>
           </div>
         </div>
@@ -206,17 +174,17 @@ watch(quantity, validateQuantity)
 }
 
 .modal-content::-webkit-scrollbar-thumb {
-  background: #8B4513;
+  background: #8b4513;
   border-radius: 4px;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover {
-  background: #6B3410;
+  background: #6b3410;
 }
 
 .modal-content h2 {
   text-align: center;
-  color: #3E2723;
+  color: #3e2723;
   margin-bottom: 1.5rem;
   font-weight: 700;
   font-size: 1.5rem;
@@ -261,14 +229,14 @@ watch(quantity, validateQuantity)
 }
 
 .product-info h3 {
-  color: #3E2723;
+  color: #3e2723;
   font-weight: 600;
   font-size: 1.3rem;
   margin: 0;
 }
 
 .product-info p {
-  color: #5D4037;
+  color: #5d4037;
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0;
@@ -297,7 +265,7 @@ watch(quantity, validateQuantity)
 }
 
 .form-group h4 {
-  color: #3E2723;
+  color: #3e2723;
   margin-bottom: 1rem;
   font-weight: 600;
   font-size: 1.1rem;
@@ -318,24 +286,24 @@ watch(quantity, validateQuantity)
   border-radius: 10px;
   transition: all 0.2s ease;
   font-size: 1rem;
-  border: 2px solid #EFEBE9;
+  border: 2px solid #efebe9;
   background: #fff;
 }
 
 .radio-label:hover {
-  background: linear-gradient(135deg, #FFF8E1, #FAFAFA);
-  border-color: #8B4513;
+  background: linear-gradient(135deg, #fff8e1, #fafafa);
+  border-color: #8b4513;
 }
 
-.radio-label input[type="radio"] {
+.radio-label input[type='radio'] {
   margin-right: 1rem;
   width: 1.2rem;
   height: 1.2rem;
-  accent-color: #8B4513;
+  accent-color: #8b4513;
 }
 
 .radio-text {
-  color: #5D4037;
+  color: #5d4037;
   font-weight: 500;
 }
 
@@ -352,7 +320,7 @@ watch(quantity, validateQuantity)
   height: 36px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, #8B4513, #6B3410);
+  background: linear-gradient(135deg, #8b4513, #6b3410);
   color: white;
   font-size: 1.2rem;
   cursor: pointer;
@@ -369,7 +337,7 @@ watch(quantity, validateQuantity)
 }
 
 .quantity-btn:disabled {
-  background: #D7CCC8;
+  background: #d7ccc8;
   cursor: not-allowed;
   box-shadow: none;
 }
@@ -378,22 +346,22 @@ watch(quantity, validateQuantity)
   width: 60px;
   height: 36px;
   text-align: center;
-  border: 2px solid #BCAAA4;
+  border: 2px solid #bcaaa4;
   border-radius: 10px;
   font-size: 1.1rem;
-  color: #3E2723;
+  color: #3e2723;
   font-weight: 600;
   background: #fff;
 }
 
 .quantity-field:focus {
   outline: none;
-  border-color: #8B4513;
+  border-color: #8b4513;
   box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
 }
 
 .error-message {
-  color: #D32F2F;
+  color: #d32f2f;
   font-size: 0.9rem;
   margin-top: 0.5rem;
   text-align: center;
@@ -401,7 +369,7 @@ watch(quantity, validateQuantity)
 }
 
 .total-price {
-  background: linear-gradient(135deg, #8B4513, #6B3410);
+  background: linear-gradient(135deg, #8b4513, #6b3410);
   padding: 1.25rem;
   border-radius: 15px;
   display: flex;
@@ -446,18 +414,18 @@ watch(quantity, validateQuantity)
 }
 
 .cancel-button {
-  background: #EFEBE9;
-  color: #5D4037;
-  border: 2px solid #D7CCC8;
+  background: #efebe9;
+  color: #5d4037;
+  border: 2px solid #d7ccc8;
 }
 
 .cancel-button:hover {
-  background: #D7CCC8;
+  background: #d7ccc8;
   transform: translateY(-2px);
 }
 
 .submit-button {
-  background: linear-gradient(135deg, #8B4513, #6B3410);
+  background: linear-gradient(135deg, #8b4513, #6b3410);
   color: white;
   box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2);
 }
@@ -571,7 +539,7 @@ watch(quantity, validateQuantity)
     bottom: 140px;
     left: 0;
     right: 0;
-    background: linear-gradient(135deg, #8B4513, #6B3410);
+    background: linear-gradient(135deg, #8b4513, #6b3410);
     padding: 0.875rem;
     margin: 0;
     border-radius: 0;
