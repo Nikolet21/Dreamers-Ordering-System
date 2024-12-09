@@ -48,7 +48,7 @@ const coffees = [
     name: 'Milky Strawberry',
     description: 'Sweet and creamy strawberry milk with a hint of richness.',
     price: 37.0,
-    image: 'src/assets/milkstrawberry.jpg',
+    image: 'src/assets/milky.jpg',
   },
   {
     id: 2,
