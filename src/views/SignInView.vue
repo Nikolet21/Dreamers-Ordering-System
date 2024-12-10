@@ -4,11 +4,11 @@ import { ref } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEye, faEyeSlash, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
 
 library.add(faEye, faEyeSlash, faExclamationCircle)
 
-const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const isLogin = ref(false)
 const email = ref('')
@@ -22,6 +22,7 @@ const usernameError = ref('')
 const passwordError = ref('')
 const confirmPasswordError = ref('')
 const loginError = ref('')
+const isLoading = ref(false)
 
 const goBack = () => {
   router.push('/')
@@ -92,7 +93,7 @@ const toggleForm = () => {
   loginError.value = ''
 }
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   loginError.value = ''  // Clear previous login error
   validateEmail()
   if (!isLogin.value) {
@@ -103,38 +104,29 @@ const handleSubmit = () => {
 
   if (!emailError.value && !passwordError.value &&
       (isLogin.value || (!usernameError.value && !confirmPasswordError.value))) {
-    if (isLogin.value) {
-      const account = userStore.accounts.find(acc => 
-        acc.email.toLowerCase() === email.value.toLowerCase() && 
-        acc.password === password.value
-      )
-
-      if (account) {
-        userStore.login({
-          email: account.email,
-          username: account.username,
-          role: account.role
-        })
-        
-        if (['admin', 'staff', 'manager'].includes(account.role)) {
+    
+    isLoading.value = true
+    try {
+      if (isLogin.value) {
+        await authStore.loginUser(email.value, password.value)
+        if (authStore.isStaff) {
           router.push('/management')
         } else {
           router.push('/')
         }
       } else {
-        loginError.value = 'Invalid email or password, please try again'
+        await authStore.registerUser({
+          email: email.value,
+          password: password.value,
+          username: username.value,
+          role: 'user'
+        })
+        router.push('/')
       }
-    } else {
-      // Handle sign up logic here
-      const userData = {
-        email: email.value,
-        username: username.value,
-        password: password.value,
-        role: 'user'
-      }
-      userStore.mockAccounts.push(userData)
-      userStore.login(userData)
-      router.push('/')
+    } catch (error) {
+      loginError.value = error.message || 'Authentication failed. Please try again.'
+    } finally {
+      isLoading.value = false
     }
   }
 }
@@ -164,7 +156,7 @@ const handleSubmit = () => {
           <form @submit.prevent="handleSubmit" novalidate>
             <!-- Login Error Message -->
             <transition name="fade">
-              <div class="form-group login-error-container" v-if="isLogin && loginError">
+              <div class="form-group login-error-container" v-if="loginError">
                 <div class="login-error">
                   <font-awesome-icon :icon="['fas', 'exclamation-circle']" class="error-icon" />
                   {{ loginError }}
@@ -181,6 +173,7 @@ const handleSubmit = () => {
                 v-model="email"
                 @input="validateEmail"
                 :class="{ error: emailError }"
+                :disabled="isLoading"
               />
               <span class="error-message" v-if="emailError">{{ emailError }}</span>
             </div>
@@ -194,62 +187,72 @@ const handleSubmit = () => {
                 v-model="username"
                 @input="validateUsername"
                 :class="{ error: usernameError }"
+                :disabled="isLoading"
               />
               <span class="error-message" v-if="usernameError">{{ usernameError }}</span>
             </div>
 
             <!-- Password Field -->
-            <div class="form-group">
+            <div class="form-group password-group">
               <label for="password">Password</label>
-              <div class="password-input">
+              <div class="password-input-container">
                 <input
                   :type="showPassword ? 'text' : 'password'"
                   id="password"
                   v-model="password"
                   @input="validatePassword"
                   :class="{ error: passwordError }"
+                  :disabled="isLoading"
                 />
-                <button type="button" class="visibility-toggle" @click="togglePasswordVisibility">
-                  <font-awesome-icon :icon="showPassword ? 'eye-slash' : 'eye'" />
+                <button
+                  type="button"
+                  class="toggle-password"
+                  @click="togglePasswordVisibility"
+                  :disabled="isLoading"
+                >
+                  <font-awesome-icon :icon="['fas', showPassword ? 'eye-slash' : 'eye']" />
                 </button>
               </div>
               <span class="error-message" v-if="passwordError">{{ passwordError }}</span>
             </div>
 
             <!-- Confirm Password Field (Sign Up only) -->
-            <div class="form-group" v-if="!isLogin">
+            <div class="form-group password-group" v-if="!isLogin">
               <label for="confirmPassword">Confirm Password</label>
-              <div class="password-input">
+              <div class="password-input-container">
                 <input
                   :type="showConfirmPassword ? 'text' : 'password'"
                   id="confirmPassword"
                   v-model="confirmPassword"
                   @input="validateConfirmPassword"
                   :class="{ error: confirmPasswordError }"
+                  :disabled="isLoading"
                 />
-                <button type="button" class="visibility-toggle" @click="toggleConfirmPasswordVisibility">
-                  <font-awesome-icon :icon="showConfirmPassword ? 'eye-slash' : 'eye'" />
+                <button
+                  type="button"
+                  class="toggle-password"
+                  @click="toggleConfirmPasswordVisibility"
+                  :disabled="isLoading"
+                >
+                  <font-awesome-icon :icon="['fas', showConfirmPassword ? 'eye-slash' : 'eye']" />
                 </button>
               </div>
               <span class="error-message" v-if="confirmPasswordError">{{ confirmPasswordError }}</span>
             </div>
 
-            <!-- Forgot Password Link -->
-            <a href="#" class="forgot-password">Forgot Password?</a>
-
-            <!-- Submit Button -->
-            <button type="submit" class="submit-button">
-              {{ isLogin ? 'Log In' : 'Sign Up' }}
+            <button type="submit" class="submit-button" :disabled="isLoading">
+              {{ isLoading ? 'Please wait...' : (isLogin ? 'Log In' : 'Sign Up') }}
             </button>
-
-            <!-- Toggle Form Type -->
-            <p class="toggle-form">
-              {{ isLogin ? 'Not registered yet?' : 'Already registered?' }}
-              <a href="#" @click.prevent="toggleForm">
-                {{ isLogin ? 'Sign In Here' : 'Log In Here' }}
-              </a>
-            </p>
           </form>
+
+          <div class="toggle-form">
+            <p>
+              {{ isLogin ? "Don't have an account?" : 'Already have an account?' }}
+              <button type="button" @click="toggleForm" :disabled="isLoading">
+                {{ isLogin ? 'Sign Up' : 'Log In' }}
+              </button>
+            </p>
+          </div>
         </div>
       </div>
     </div>
@@ -383,11 +386,11 @@ input.error {
   border-color: #ef5350;
 }
 
-.password-input {
+.password-input-container {
   position: relative;
 }
 
-.visibility-toggle {
+.toggle-password {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -405,7 +408,7 @@ input.error {
   height: 24px;
 }
 
-.visibility-toggle:hover {
+.toggle-password:hover {
   color: #5d4037;
 }
 
@@ -448,13 +451,13 @@ input.error {
   font-weight: 400;
 }
 
-.toggle-form a {
+.toggle-form button {
   color: #3E2723;
   text-decoration: none;
   font-weight: 500;
 }
 
-.toggle-form a:hover {
+.toggle-form button:hover {
   text-decoration: underline;
 }
 

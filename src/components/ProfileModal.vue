@@ -1,11 +1,11 @@
 <script setup>
 import { ref, watch } from 'vue';
-import { useUserStore } from '@/stores/userStore';
+import { useAuthStore } from '@/stores/authStore';
 import { library } from '@fortawesome/fontawesome-svg-core';
-import { faEdit, faSave, faTimes } from '@fortawesome/free-solid-svg-icons';
+import { faEdit, faSave, faTimes, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
-library.add(faEdit, faSave, faTimes);
+library.add(faEdit, faSave, faTimes, faSpinner);
 
 const props = defineProps({
   isOpen: {
@@ -16,33 +16,35 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'update:profile']);
 
-const userStore = useUserStore();
+const authStore = useAuthStore();
 const isEditing = ref(false);
+const isLoading = ref(false);
 const editedProfile = ref({
-  username: userStore.username,
-  email: userStore.email
+  username: authStore.currentUser?.username,
+  email: authStore.currentUser?.email
 });
 const errorMessage = ref('');
 
-// Watch for changes in userStore data
-watch(() => userStore.username, (newUsername) => {
-  if (!isEditing.value) {
+// Watch for changes in authStore data
+watch(() => authStore.currentUser?.username, (newUsername) => {
+  if (!isEditing.value && newUsername) {
     editedProfile.value.username = newUsername;
   }
 });
 
-watch(() => userStore.email, (newEmail) => {
-  if (!isEditing.value) {
+watch(() => authStore.currentUser?.email, (newEmail) => {
+  if (!isEditing.value && newEmail) {
     editedProfile.value.email = newEmail;
   }
 });
 
 const closeModal = () => {
   isEditing.value = false;
+  isLoading.value = false;
   errorMessage.value = '';
   editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
+    username: authStore.currentUser?.username,
+    email: authStore.currentUser?.email
   };
   emit('close');
 };
@@ -50,8 +52,8 @@ const closeModal = () => {
 const toggleEdit = () => {
   isEditing.value = true;
   editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
+    username: authStore.currentUser?.username,
+    email: authStore.currentUser?.email
   };
   errorMessage.value = '';
 };
@@ -77,33 +79,36 @@ const validateForm = () => {
   return true;
 };
 
-const saveChanges = () => {
+const saveChanges = async () => {
   if (!validateForm()) {
     return;
   }
 
-  const updatedProfile = {
-    username: editedProfile.value.username.trim(),
-    email: editedProfile.value.email.trim()
-  };
+  isLoading.value = true;
+  errorMessage.value = '';
 
-  const success = userStore.updateProfile(updatedProfile);
+  try {
+    const updatedProfile = {
+      username: editedProfile.value.username.trim(),
+      email: editedProfile.value.email.trim()
+    };
 
-  if (success) {
+    await authStore.updateUser(authStore.currentUser.uid, updatedProfile);
     emit('update:profile', updatedProfile);
     isEditing.value = false;
-    errorMessage.value = '';
     closeModal();
-  } else {
-    errorMessage.value = 'Failed to update profile. Please try again.';
+  } catch (error) {
+    errorMessage.value = error.message || 'Failed to update profile. Please try again.';
+  } finally {
+    isLoading.value = false;
   }
 };
 
 const cancelEdit = () => {
   isEditing.value = false;
   editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
+    username: authStore.currentUser?.username,
+    email: authStore.currentUser?.email
   };
   errorMessage.value = '';
 };
@@ -127,11 +132,11 @@ const cancelEdit = () => {
         <div v-if="!isEditing" class="profile-info">
           <div class="info-item">
             <label>Username:</label>
-            <span>{{ userStore.username }}</span>
+            <span>{{ authStore.currentUser?.username }}</span>
           </div>
           <div class="info-item">
             <label>Email:</label>
-            <span>{{ userStore.email }}</span>
+            <span>{{ authStore.currentUser?.email }}</span>
           </div>
           <button class="edit-button" @click="toggleEdit">
             <font-awesome-icon :icon="['fas', 'edit']" /> Edit Profile
@@ -144,8 +149,9 @@ const cancelEdit = () => {
             <input
               v-model.trim="editedProfile.username"
               type="text"
-              :placeholder="userStore.username"
+              :placeholder="authStore.currentUser?.username"
               @keyup.enter="saveChanges"
+              :disabled="isLoading"
             >
           </div>
           <div class="info-item">
@@ -153,15 +159,18 @@ const cancelEdit = () => {
             <input
               v-model.trim="editedProfile.email"
               type="email"
-              :placeholder="userStore.email"
+              :placeholder="authStore.currentUser?.email"
               @keyup.enter="saveChanges"
+              :disabled="isLoading"
             >
           </div>
           <div class="button-group">
-            <button class="save-button" @click="saveChanges">
-              <font-awesome-icon :icon="['fas', 'save']" /> Save
+            <button class="save-button" @click="saveChanges" :disabled="isLoading">
+              <font-awesome-icon v-if="isLoading" :icon="['fas', 'spinner']" spin />
+              <font-awesome-icon v-else :icon="['fas', 'save']" />
+              {{ isLoading ? 'Saving...' : 'Save' }}
             </button>
-            <button class="cancel-button" @click="cancelEdit">
+            <button class="cancel-button" @click="cancelEdit" :disabled="isLoading">
               Cancel
             </button>
           </div>
