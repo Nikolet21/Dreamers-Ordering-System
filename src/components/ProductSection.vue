@@ -1,16 +1,23 @@
 <script setup>
-import { ref, defineAsyncComponent, defineEmits } from 'vue'
+import { ref, defineAsyncComponent, onMounted, defineEmits} from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import { useProductStore } from '@/stores/productStore'
 
 const OrderingModal = defineAsyncComponent(() => import('../components/OrderingModal.vue'))
 
 const router = useRouter()
 const userStore = useUserStore()
+const productStore = useProductStore()
 
 const isOrderingModalOpen = ref(false)
 const isLoginWarningOpen = ref(false)
 const selectedProduct = ref(null)
+
+// Fetch menu items when component mounts
+onMounted(async () => {
+  await productStore.fetchMenuItems()
+})
 
 const openOrderingModal = (product) => {
   if (!userStore.isLoggedIn) {
@@ -36,56 +43,25 @@ const navigateToLogin = () => {
   router.push('/signin')
 }
 
-const emit = defineEmits(['addToCart'])
-
-const handleOrderSubmit = (orderDetails) => {
-  emit('addToCart', orderDetails)
+const handleOrderSubmit = async (orderDetails) => {
+  try {
+    await productStore.createOrder({
+      items: [{ ...orderDetails, productId: selectedProduct.value.id }],
+      totalAmount: orderDetails.quantity * selectedProduct.value.price,
+      customerName: userStore.username,
+      status: 'pending'
+    })
+    closeOrderingModal()
+  } catch (error) {
+    console.error('Failed to create order:', error)
+    // Handle error (show notification, etc.)
+  }
 }
 
-const coffees = [
-  {
-    id: 1,
-    name: 'Milky Strawberry',
-    description: 'Sweet and creamy strawberry milk with a hint of richness.',
-    price: 37.0,
-    image: 'src/assets/milky.jpg',
-  },
-  {
-    id: 2,
-    name: 'Dream Latte',
-    description: 'A smooth and velvety latte with a dreamy touch of caramel.',
-    price: 37.0,
-    image: 'src/assets/vanillalatte.jpg',
-  },
-  {
-    id: 3,
-    name: 'Caramel Macchiato',
-    description: 'Espresso layered with steamed milk and drizzled caramel.',
-    price: 37.0,
-    image: 'src/assets/caramel.jpg',
-  },
-  {
-    id: 4,
-    name: 'Dark Chocolate',
-    description: 'Rich and bold hot chocolate made with premium dark cocoa.',
-    price: 37.0,
-    image: 'src/assets/darkchoco.jpg',
-  },
-  {
-    id: 5,
-    name: 'Dreamy Yogurt',
-    description: 'Incredibly refreshing yogurt drink with a creamy, tangy finish.',
-    price: 37.0,
-    image: 'src/assets/yogurt.jpg',
-  },
-  {
-    id: 6,
-    name: 'Hot Dark Chocolate',
-    description: 'Indulgent hot cocoa with a deep, intense chocolate flavor.',
-    price: 37.0,
-    image: 'src/assets/hotchoco.jpg',
-  },
-]
+const emit = defineEmits(['addToCart'])
+
+const coffees = productStore.menuItems
+
 </script>
 
 <template>
