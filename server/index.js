@@ -181,6 +181,128 @@ app.delete('/api/users/:userId', verifyToken, async (req, res) => {
   }
 });
 
+// Review Routes
+app.post('/api/reviews', verifyToken, async (req, res) => {
+  try {
+    const { rating, comment, orderId } = req.body;
+    const reviewData = {
+      rating,
+      comment,
+      orderId,
+      userId: req.user.uid,
+      username: req.user.displayName,
+      createdAt: new Date().toISOString()
+    };
+    
+    const reviewRef = await db.collection('reviews').add(reviewData);
+    
+    // Update the order to mark it as reviewed
+    if (orderId) {
+      await db.collection('orders').doc(orderId).update({
+        hasReview: true
+      });
+    }
+    
+    res.status(201).json({ id: reviewRef.id, ...reviewData });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create review', details: error.message });
+  }
+});
+
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const reviewsSnapshot = await db.collection('reviews')
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    const reviews = [];
+    reviewsSnapshot.forEach(doc => {
+      reviews.push({ id: doc.id, ...doc.data() });
+    });
+    
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch reviews', details: error.message });
+  }
+});
+
+app.get('/api/reviews/user/:userId', verifyToken, async (req, res) => {
+  try {
+    const reviewsSnapshot = await db.collection('reviews')
+      .where('userId', '==', req.params.userId)
+      .orderBy('createdAt', 'desc')
+      .get();
+    
+    const reviews = [];
+    reviewsSnapshot.forEach(doc => {
+      reviews.push({ id: doc.id, ...doc.data() });
+    });
+    
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user reviews', details: error.message });
+  }
+});
+
+app.patch('/api/reviews/:reviewId', verifyToken, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    const reviewRef = db.collection('reviews').doc(req.params.reviewId);
+    const review = await reviewRef.get();
+    
+    if (!review.exists) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    // Check if user owns the review
+    if (review.data().userId !== req.user.uid) {
+      return res.status(403).json({ error: 'Not authorized to update this review' });
+    }
+    
+    await reviewRef.update({
+      rating,
+      comment,
+      updatedAt: new Date().toISOString()
+    });
+    
+    res.json({ message: 'Review updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update review', details: error.message });
+  }
+});
+
+app.delete('/api/reviews/:reviewId', verifyToken, async (req, res) => {
+  try {
+    const reviewRef = db.collection('reviews').doc(req.params.reviewId);
+    const review = await reviewRef.get();
+    
+    if (!review.exists) {
+      return res.status(404).json({ error: 'Review not found' });
+    }
+    
+    // Check if user owns the review or is admin
+    const userDoc = await db.collection('users').doc(req.user.uid).get();
+    const isAdmin = userDoc.exists && userDoc.data().role === 'admin';
+    
+    if (review.data().userId !== req.user.uid && !isAdmin) {
+      return res.status(403).json({ error: 'Not authorized to delete this review' });
+    }
+    
+    // If review is linked to an order, update the order
+    const reviewData = review.data();
+    if (reviewData.orderId) {
+      await db.collection('orders').doc(reviewData.orderId).update({
+        hasReview: false
+      });
+    }
+    
+    await reviewRef.delete();
+    res.json({ message: 'Review deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete review', details: error.message });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

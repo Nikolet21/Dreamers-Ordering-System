@@ -1,10 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faUserCircle, faCheck, faTrash, faCheckCircle } from '@fortawesome/free-solid-svg-icons'
+import { useReviewStore } from '@/stores/reviewStore'
+import { useAuthStore } from '@/stores/authStore'
 
 library.add(faUserCircle, faCheck, faTrash, faCheckCircle)
+
+const reviewStore = useReviewStore()
+const authStore = useAuthStore()
 
 // Filter options
 const starRatings = [5, 4, 3, 2, 1]
@@ -15,118 +20,6 @@ const currentReadFilter = ref('all') // Set default to 'all'
 // Modal state
 const showDeleteModal = ref(false)
 const reviewToDelete = ref(null)
-
-// Sample data - replace with actual data later
-const reviews = ref([
-  {
-    id: 1,
-    username: 'John Doe',
-    rating: 5,
-    productName: 'Milky Strawberry',
-    description: 'Absolutely delicious! Perfect blend of flavors.',
-    date: new Date('2024-02-20T10:30:00'),
-    isRead: false
-  },
-  {
-    id: 2,
-    username: 'Jane Smith',
-    rating: 4,
-    productName: 'Dream Latte',
-    description: 'Great coffee, very smooth and aromatic.',
-    date: new Date('2024-02-19T15:45:00'),
-    isRead: true
-  },
-  {
-    id: 3,
-    username: 'Mike Johnson',
-    rating: 5,
-    productName: 'Caramel Macchiato',
-    description: 'Best caramel macchiato I\'ve ever had! Will definitely order again.',
-    date: new Date('2024-02-18T09:15:00'),
-    isRead: false
-  },
-  {
-    id: 4,
-    username: 'Sarah Wilson',
-    rating: 3,
-    productName: 'Dark Chocolate',
-    description: 'Good but could be a bit sweeter.',
-    date: new Date('2024-02-17T14:20:00'),
-    isRead: true
-  },
-  {
-    id: 5,
-    username: 'David Brown',
-    rating: 5,
-    productName: 'Dreamy Yogurt',
-    description: 'Fresh and creamy! Love the fruit toppings.',
-    date: new Date('2024-02-16T11:30:00'),
-    isRead: false
-  },
-  {
-    id: 6,
-    username: 'Emma Davis',
-    rating: 4,
-    productName: 'Hot Dark Chocolate',
-    description: 'Perfect for cold days. Rich and warming.',
-    date: new Date('2024-02-15T16:45:00'),
-    isRead: true
-  },
-  {
-    id: 7,
-    username: 'Chris Lee',
-    rating: 2,
-    productName: 'Milky Strawberry',
-    description: 'A bit too sweet for my taste.',
-    date: new Date('2024-02-14T13:20:00'),
-    isRead: false
-  },
-  {
-    id: 8,
-    username: 'Lisa Anderson',
-    rating: 5,
-    productName: 'Dream Latte',
-    description: 'The perfect balance of coffee and milk. Amazing!',
-    date: new Date('2024-02-13T10:15:00'),
-    isRead: true
-  },
-  {
-    id: 9,
-    username: 'Tom Wilson',
-    rating: 4,
-    productName: 'Caramel Macchiato',
-    description: 'Love the caramel flavor, not too sweet.',
-    date: new Date('2024-02-12T15:30:00'),
-    isRead: false
-  },
-  {
-    id: 10,
-    username: 'Amy Chen',
-    rating: 5,
-    productName: 'Dreamy Yogurt',
-    description: 'So refreshing! The fruit is always fresh.',
-    date: new Date('2024-02-11T12:45:00'),
-    isRead: true
-  },
-  {
-    id: 11,
-    username: 'Mark Thompson',
-    rating: 3,
-    productName: 'Hot Dark Chocolate',
-    description: 'Good but could be a bit richer.',
-    date: new Date('2024-02-10T14:20:00'),
-    isRead: false
-  },
-  {
-    id: 12,
-    username: 'Rachel Green',
-    rating: 5,
-    productName: 'Dark Chocolate',
-    description: 'Perfect level of sweetness! My new favorite.',
-    date: new Date('2024-02-09T11:30:00'),
-    isRead: true
-  }
-])
 
 // Available products (matching ReviewSection)
 const products = [
@@ -149,10 +42,18 @@ const readStatuses = [
 const itemsPerPage = 6
 const currentPage = ref(1)
 
+// Load reviews when component mounts
+onMounted(async () => {
+  await reviewStore.fetchReviews()
+})
+
 // Methods for review actions
-const markAsRead = (review) => {
-  review.isRead = true
-  // Add API call here to update the review status in the backend
+const markAsRead = async (review) => {
+  try {
+    await reviewStore.updateReview(review.id, { ...review, isRead: true })
+  } catch (error) {
+    console.error('Failed to mark review as read:', error)
+  }
 }
 
 const deleteReview = (review) => {
@@ -165,18 +66,20 @@ const cancelDelete = () => {
   reviewToDelete.value = null
 }
 
-const confirmDelete = () => {
-  const index = reviews.value.findIndex(r => r.id === reviewToDelete.value.id)
-  if (index !== -1) {
-    reviews.value.splice(index, 1)
+const confirmDelete = async () => {
+  try {
+    await reviewStore.deleteReview(reviewToDelete.value.id)
+    showDeleteModal.value = false
+    reviewToDelete.value = null
+  } catch (error) {
+    console.error('Failed to delete review:', error)
+    alert('Failed to delete review: ' + error.message)
   }
-  showDeleteModal.value = false
-  reviewToDelete.value = null
 }
 
 // Computed properties
 const filteredReviews = computed(() => {
-  return reviews.value.filter(review => {
+  return reviewStore.getAllReviews.filter(review => {
     const starMatch = !currentStarFilter.value || review.rating === parseInt(currentStarFilter.value)
     const productMatch = !currentProductFilter.value || review.productName === currentProductFilter.value
     const readMatch = currentReadFilter.value === 'all' || 
@@ -199,38 +102,39 @@ const displayedPageNumbers = computed(() => {
     return Array.from({ length: totalPages.value }, (_, i) => i + 1)
   }
 
-  let numbers = []
-  const current = currentPage.value
-  const total = totalPages.value
-
+  let pages = []
   // Always show first page
-  numbers.push(1)
+  pages.push(1)
 
-  if (current > 3) {
-    numbers.push('...')
+  // Calculate middle pages
+  let middleStart = Math.max(2, currentPage.value - 1)
+  let middleEnd = Math.min(totalPages.value - 1, currentPage.value + 1)
+
+  // Adjust if at the start
+  if (currentPage.value <= 3) {
+    middleStart = 2
+    middleEnd = 4
+  }
+  // Adjust if at the end
+  else if (currentPage.value >= totalPages.value - 2) {
+    middleStart = totalPages.value - 3
+    middleEnd = totalPages.value - 1
   }
 
-  // Show pages around current page
-  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-    numbers.push(i)
-  }
-
-  if (current < total - 2) {
-    numbers.push('...')
+  // Add middle pages
+  for (let i = middleStart; i <= middleEnd; i++) {
+    pages.push(i)
   }
 
   // Always show last page
-  if (total > 1) {
-    numbers.push(total)
-  }
+  pages.push(totalPages.value)
 
-  return numbers
+  return pages
 })
 
+// Navigation methods
 const goToPage = (page) => {
-  if (page !== '...') {
-    currentPage.value = page
-  }
+  currentPage.value = page
 }
 
 const prevPage = () => {
@@ -248,13 +152,16 @@ const nextPage = () => {
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
-    month: 'short',
+    month: 'long',
     day: 'numeric'
   })
 }
 
-const renderStars = (rating) => {
-  return '★'.repeat(rating) + '☆'.repeat(5 - rating)
+const renderStars = (rating) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
+
+// Check if user can modify review
+const canModifyReview = (review) => {
+  return authStore.isAdmin || (authStore.user && authStore.user.uid === review.userId)
 }
 </script>
 
@@ -331,7 +238,7 @@ const renderStars = (rating) => {
                 <font-awesome-icon :icon="review.isRead ? ['fas', 'check-circle'] : ['fas', 'check']" />
                 {{ review.isRead ? 'Read' : 'Mark as Read' }}
               </button>
-              <button @click="deleteReview(review)" class="action-btn delete-btn">
+              <button @click="deleteReview(review)" class="action-btn delete-btn" v-if="canModifyReview(review)">
                 <font-awesome-icon :icon="['fas', 'trash']" />
                 Delete
               </button>

@@ -1,13 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useUserStore } from '@/stores/userStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useReviewStore } from '@/stores/reviewStore'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faUserCircle } from '@fortawesome/free-solid-svg-icons'
 
 library.add(faUserCircle)
 
-const userStore = useUserStore()
+const authStore = useAuthStore()
+const reviewStore = useReviewStore()
 
 const selectedProduct = ref('')
 const productRating = ref(0)
@@ -23,66 +25,20 @@ const successTimeout = ref(null)
 const ITEMS_PER_PAGE = 4
 const currentPage = ref(1)
 
-const customerReviews = ref([
-  {
-    id: 1,
-    username: 'John Doe',
-    rating: 5,
-    productName: 'Milky Strawberry',
-    description: 'Absolutely delicious! Perfect blend of flavors.',
-    date: new Date('2024-02-20T10:30:00')
-  },
-  {
-    id: 2,
-    username: 'Jane Smith',
-    rating: 4,
-    productName: 'Dream Latte',
-    description: 'Great coffee, very smooth and aromatic.',
-    date: new Date('2024-02-19T15:45:00')
-  },
-  {
-    id: 3,
-    username: 'Mike Johnson',
-    rating: 5,
-    productName: 'Caramel Macchiato',
-    description: 'Best caramel macchiato I\'ve ever had! Will definitely order again.',
-    date: new Date('2024-02-18T09:15:00')
-  },
-  {
-    id: 4,
-    username: 'Sarah Wilson',
-    rating: 3,
-    productName: 'Dark Chocolate',
-    description: 'Good but could be a bit sweeter.',
-    date: new Date('2024-02-17T14:20:00')
-  },
-  {
-    id: 5,
-    username: 'David Brown',
-    rating: 5,
-    productName: 'Dreamy Yogurt',
-    description: 'Fresh and creamy! Love the fruit toppings.',
-    date: new Date('2024-02-16T11:30:00')
-  },
-  {
-    id: 6,
-    username: 'Emma Davis',
-    rating: 4,
-    productName: 'Hot Dark Chocolate',
-    description: 'Perfect for cold days. Rich and warming.',
-    date: new Date('2024-02-15T16:45:00')
-  }
-])
+// Load reviews when component mounts
+onMounted(async () => {
+  await reviewStore.fetchReviews()
+})
 
 // Pagination computed properties
 const totalPages = computed(() => {
-  return Math.ceil(customerReviews.value.length / ITEMS_PER_PAGE)
+  return Math.ceil(reviewStore.getAllReviews.length / ITEMS_PER_PAGE)
 })
 
 const paginatedReviews = computed(() => {
   const start = (currentPage.value - 1) * ITEMS_PER_PAGE
   const end = start + ITEMS_PER_PAGE
-  return customerReviews.value.slice(start, end)
+  return reviewStore.getAllReviews.slice(start, end)
 })
 
 const displayedPageNumbers = computed(() => {
@@ -147,48 +103,45 @@ const formatDate = (date) => {
 
 const renderStars = (rating) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
 
-const generateId = () => {
-  return Math.max(0, ...customerReviews.value.map(r => r.id)) + 1
-}
-
-const submitProductReview = () => {
+const submitProductReview = async () => {
   // Validate inputs
   if (!selectedProduct.value || !productRating.value || !productFeedback.value) {
     alert('Please fill in all fields')
     return
   }
 
-  // Create new review object
-  const newReview = {
-    id: generateId(),
-    username: userStore.isLoggedIn ? userStore.username : 'Anonymous',
-    rating: productRating.value,
-    productName: selectedProduct.value,
-    description: productFeedback.value,
-    date: new Date()
+  try {
+    // Create new review object
+    const reviewData = {
+      rating: productRating.value,
+      productName: selectedProduct.value,
+      comment: productFeedback.value
+    }
+
+    // Submit review using store
+    await reviewStore.createReview(reviewData)
+
+    // Reset form
+    selectedProduct.value = ''
+    productRating.value = 0
+    productFeedback.value = ''
+
+    // Show success message
+    showSuccessMessage.value = true
+
+    // Clear success message after 3 seconds
+    if (successTimeout.value) {
+      clearTimeout(successTimeout.value)
+    }
+    successTimeout.value = setTimeout(() => {
+      showSuccessMessage.value = false
+    }, 3000)
+
+    // Go to first page to show the new review
+    currentPage.value = 1
+  } catch (error) {
+    alert('Failed to submit review: ' + error.message)
   }
-
-  // Add to beginning of reviews array to show newest first
-  customerReviews.value.unshift(newReview)
-
-  // Reset form
-  selectedProduct.value = ''
-  productRating.value = 0
-  productFeedback.value = ''
-
-  // Show success message
-  showSuccessMessage.value = true
-
-  // Clear success message after 3 seconds
-  if (successTimeout.value) {
-    clearTimeout(successTimeout.value)
-  }
-  successTimeout.value = setTimeout(() => {
-    showSuccessMessage.value = false
-  }, 3000)
-
-  // Go to first page to show the new review
-  currentPage.value = 1
 }
 
 const submitContact = () => {
@@ -198,6 +151,10 @@ const submitContact = () => {
     email: '',
     message: '',
   }
+}
+
+const generateId = () => {
+  return Math.max(0, ...reviewStore.getAllReviews.map(r => r.id)) + 1
 }
 </script>
 
@@ -283,10 +240,10 @@ const submitContact = () => {
               <div class="product-name">
                 <strong>Product:</strong> {{ review.productName }}
               </div>
-              <p class="review-text">{{ review.description }}</p>
+              <p class="review-text">{{ review.comment }}</p>
               <div class="review-footer">
                 <div class="review-date">
-                  {{ formatDate(review.date) }}
+                  {{ formatDate(review.createdAt) }}
                 </div>
               </div>
             </div>
