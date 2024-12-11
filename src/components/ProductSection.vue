@@ -1,7 +1,8 @@
 <script setup>
-import { ref, defineAsyncComponent, defineEmits } from 'vue'
+import { ref, defineAsyncComponent, defineEmits, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/userStore'
+import dataService from '@/services/dataService'
 
 const OrderingModal = defineAsyncComponent(() => import('../components/OrderingModal.vue'))
 
@@ -11,6 +12,27 @@ const userStore = useUserStore()
 const isOrderingModalOpen = ref(false)
 const isLoginWarningOpen = ref(false)
 const selectedProduct = ref(null)
+const coffees = ref([])
+const loading = ref(true)
+const error = ref(null)
+
+// Fetch menu data from Firestore
+const fetchMenuData = async () => {
+  try {
+    loading.value = true
+    const menuData = await dataService.fetchMenuData()
+    coffees.value = menuData
+    loading.value = false
+  } catch (err) {
+    error.value = 'Failed to load menu items'
+    loading.value = false
+    console.error('Error loading menu:', err)
+  }
+}
+
+onMounted(() => {
+  fetchMenuData()
+})
 
 const openOrderingModal = (product) => {
   if (!userStore.isLoggedIn) {
@@ -41,58 +63,15 @@ const emit = defineEmits(['addToCart'])
 const handleOrderSubmit = (orderDetails) => {
   emit('addToCart', orderDetails)
 }
-
-const coffees = [
-  {
-    id: 1,
-    name: 'Milky Strawberry',
-    description: 'Sweet and creamy strawberry milk with a hint of richness.',
-    price: 37.0,
-    image: 'src/assets/milky.jpg',
-  },
-  {
-    id: 2,
-    name: 'Dream Latte',
-    description: 'A smooth and velvety latte with a dreamy touch of caramel.',
-    price: 37.0,
-    image: 'src/assets/vanillalatte.jpg',
-  },
-  {
-    id: 3,
-    name: 'Caramel Macchiato',
-    description: 'Espresso layered with steamed milk and drizzled caramel.',
-    price: 37.0,
-    image: 'src/assets/caramel.jpg',
-  },
-  {
-    id: 4,
-    name: 'Dark Chocolate',
-    description: 'Rich and bold hot chocolate made with premium dark cocoa.',
-    price: 37.0,
-    image: 'src/assets/darkchoco.jpg',
-  },
-  {
-    id: 5,
-    name: 'Dreamy Yogurt',
-    description: 'Incredibly refreshing yogurt drink with a creamy, tangy finish.',
-    price: 37.0,
-    image: 'src/assets/yogurt.jpg',
-  },
-  {
-    id: 6,
-    name: 'Hot Dark Chocolate',
-    description: 'Indulgent hot cocoa with a deep, intense chocolate flavor.',
-    price: 37.0,
-    image: 'src/assets/hotchoco.jpg',
-  },
-]
 </script>
 
 <template>
   <div class="product-section">
     <section class="category-section">
       <h2 class="section-title">Our Signature Coffees</h2>
-      <div class="product-grid">
+      <div v-if="loading" class="loading">Loading menu items...</div>
+      <div v-else-if="error" class="error">{{ error }}</div>
+      <div v-else class="product-grid">
         <div v-for="coffee in coffees" :key="coffee.id" class="product-card">
           <img :src="coffee.image" :alt="coffee.name" class="product-image" />
           <div class="product-info">
@@ -302,6 +281,17 @@ const coffees = [
 
 .cancel-button:hover {
   background-color: #d0d0d0;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error {
+  color: #dc3545;
 }
 
 @media (max-width: 768px) {
