@@ -6,7 +6,6 @@ import { readFile } from 'fs/promises';
 import path from 'path';
 import process from 'process';
 
-// Read JSON file dynamically
 const serviceAccountKey = JSON.parse(
   await readFile(
     path.resolve('./server/serviceAccountKey.json'),
@@ -31,7 +30,7 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'Backend is working!' });
 });
 
-// Firestore example route
+// Menu route
 app.get('/api/menu', async (req, res) => {
   try {
     const snapshot = await admin.firestore().collection('menu').get();
