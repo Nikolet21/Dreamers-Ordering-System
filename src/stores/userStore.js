@@ -1,29 +1,27 @@
 import { defineStore } from 'pinia'
+import { auth, db } from '@/firebase/firebaseconfig'
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signOut,
+  sendPasswordResetEmail,
+  updateProfile as updateFirebaseProfile 
+} from 'firebase/auth'
+import { doc, setDoc, getDoc } from 'firebase/firestore'
 
 export const useUserStore = defineStore('user', {
-  // State
   state: () => ({
     user: null,
     isAuthenticated: false,
-    mockAccounts: [
-      { id: 1, username: 'test', email: 'test@gmail.com', password: 'Password123!', role: 'user' },
-      { id: 2, username: 'user', email: 'user@gmail.com', password: 'User@2024', role: 'user' },
-      { id: 3, username: 'admin', email: 'admin@gmail.com', password: 'Admin@2024', role: 'admin' },
-      { id: 4, username: 'staff', email: 'staff@gmail.com', password: 'Staff@2024', role: 'staff' },
-      { id: 5, username: 'manager', email: 'manager@gmail.com', password: 'Manager@2024', role: 'manager' }
-    ],
-    nextId: 6,  // Track the next available ID
     pendingOrders: []
   }),
 
-  // Getters
   getters: {
     currentUser: (state) => state.user,
     isLoggedIn: (state) => state.isAuthenticated,
-    username: (state) => state.user?.username || '',
+    username: (state) => state.user?.displayName || '',
     email: (state) => state.user?.email || '',
-    accounts: (state) => state.mockAccounts,
-    userRole: (state) => state.user?.role || '',
+    userRole: (state) => state.user?.role || 'user',
     hasManagementAccess: (state) => {
       const role = state.user?.role
       return role === 'admin' || role === 'manager' || role === 'staff'
@@ -31,88 +29,158 @@ export const useUserStore = defineStore('user', {
     getPendingOrders: (state) => state.pendingOrders
   },
 
-  // Actions
   actions: {
-    login(userData) {
-      const account = this.mockAccounts.find(
-        acc => acc.email === userData.email
-      )
-      this.user = {
-        ...userData,
-        role: account?.role || 'user'
+    async registerUser({ email, password, username }) {
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+        
+        // Update user profile with username
+        await updateFirebaseProfile(userCredential.user, {
+          displayName: username
+        })
+
+        // Create user document in Firestore
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          email,
+          username,
+          role: 'user',
+          createdAt: new Date().toISOString()
+        })
+
+        // Set local user state
+        this.user = {
+          ...userCredential.user,
+          role: 'user'
+        }
+        this.isAuthenticated = true
+        return { success: true }
+      } catch (error) {
+        console.error('Registration error:', error)
+        return { 
+          success: false, 
+          error: error.message 
+        }
       }
-      this.isAuthenticated = true
-      this.persistUserData()
     },
 
-    logout() {
-      this.user = null
-      this.isAuthenticated = false
-      this.clearPersistedData()
+    async login({ email, password }) {
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password)
+        
+        // Get user data from Firestore
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid))
+        const userData = userDoc.data()
+
+        this.user = {
+          ...userCredential.user,
+          role: userData.role
+        }
+        this.isAuthenticated = true
+        return { success: true }
+      } catch (error) {
+        console.error('Login error:', error)
+        return { 
+          success: false, 
+          error: error.message 
+        }
+      }
     },
 
-    updateProfile(profileData) {
-      if (!this.user) return false;
-
-      // Update user profile
-      this.user = {
-        ...this.user,
-        username: profileData.username,
-        email: profileData.email
-      };
-
-      // Update in mock accounts if exists
-      const accountIndex = this.mockAccounts.findIndex(
-        acc => acc.email === this.user.email || acc.username === this.user.username
-      );
-
-      if (accountIndex !== -1) {
-        this.mockAccounts[accountIndex] = {
-          ...this.mockAccounts[accountIndex],
-          username: profileData.username,
-          email: profileData.email
-        };
+    async logout() {
+      try {
+        await signOut(auth)
+        this.user = null
+        this.isAuthenticated = false
+        this.clearPersistedData()
+        return { success: true }
+      } catch (error) {
+        console.error('Logout error:', error)
+        return { 
+          success: false, 
+          error: error.message 
+        }
       }
+    },
 
-      this.persistUserData();
-      return true;
+    async updateProfile(profileData) {
+      try {
+        if (!this.user) throw new Error('No user logged in')
+
+        // Update Firebase profile
+        await updateFirebaseProfile(auth.currentUser, {
+          displayName: profileData.username
+        })
+
+        // Update Firestore document
+        await setDoc(doc(db, 'users', this.user.uid), {
+          ...profileData,
+          updatedAt: new Date().toISOString()
+        }, { merge: true })
+
+        // Update local state
+        this.user = {
+          ...this.user,
+          ...profileData
+        }
+        return { success: true }
+      } catch (error) {
+        console.error('Profile update error:', error)
+        return { 
+          success: false, 
+          error: error.message 
+        }
+      }
+    },
+
+    async resetPassword(email) {
+      try {
+        await sendPasswordResetEmail(auth, email)
+        return { success: true }
+      } catch (error) {
+        console.error('Password reset error:', error)
+        let errorMessage = 'Failed to send password reset email'
+        
+        switch (error.code) {
+          case 'auth/user-not-found':
+            errorMessage = 'No account found with this email address'
+            break
+          case 'auth/invalid-email':
+            errorMessage = 'Please enter a valid email address'
+            break
+          case 'auth/too-many-requests':
+            errorMessage = 'Too many attempts. Please try again later'
+            break
+        }
+        
+        return { 
+          success: false, 
+          error: errorMessage 
+        }
+      }
     },
 
     persistUserData() {
       localStorage.setItem('user', JSON.stringify(this.user))
-      localStorage.setItem('mockAccounts', JSON.stringify(this.mockAccounts))
-      localStorage.setItem('pendingOrders', JSON.stringify(this.pendingOrders))
+      localStorage.setItem('isAuthenticated', JSON.stringify(this.isAuthenticated))
     },
 
     clearPersistedData() {
       localStorage.removeItem('user')
       localStorage.removeItem('isAuthenticated')
-      localStorage.removeItem('pendingOrders')
-      localStorage.setItem('isAuthenticated', 'false')
     },
 
     initializeFromStorage() {
       const storedUser = localStorage.getItem('user')
-      const storedAccounts = localStorage.getItem('mockAccounts')
-      const storedOrders = localStorage.getItem('pendingOrders')
-
-      if (storedUser) {
+      const storedAuth = localStorage.getItem('isAuthenticated')
+      
+      if (storedUser && storedAuth) {
         this.user = JSON.parse(storedUser)
-        this.isAuthenticated = true
-      }
-
-      if (storedAccounts) {
-        this.mockAccounts = JSON.parse(storedAccounts)
-      }
-
-      if (storedOrders) {
-        this.pendingOrders = JSON.parse(storedOrders)
+        this.isAuthenticated = JSON.parse(storedAuth)
       }
     },
 
     addPendingOrder(order) {
-      this.pendingOrders.unshift(order)
-      this.persistUserData()
+      this.pendingOrders.push(order)
     },
 
     updateOrderStatus(orderId, newStatus) {
@@ -120,26 +188,6 @@ export const useUserStore = defineStore('user', {
       if (order) {
         order.status = newStatus
       }
-    },
-
-    deleteAccount(accountId) {
-      console.log('Deleting account with ID:', accountId)  // Debug log
-      const index = this.mockAccounts.findIndex(account => account.id === accountId)
-      console.log('Found at index:', index)  // Debug log
-      if (index !== -1) {
-        const deletedAccount = this.mockAccounts[index]
-        console.log('Account to be deleted:', deletedAccount)  // Debug log
-        this.mockAccounts.splice(index, 1)
-        this.persistUserData()
-        return true
-      }
-      return false
-    },
-
-    getNextId() {
-      const nextId = this.nextId
-      this.nextId++
-      return nextId
     }
   }
 })

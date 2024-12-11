@@ -5,6 +5,7 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { faEye, faEyeSlash, faExclamationCircle } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useUserStore } from '@/stores/userStore'
+import ForgotPasswordModal from '@/components/ForgotPasswordModal.vue'
 
 library.add(faEye, faEyeSlash, faExclamationCircle)
 
@@ -22,6 +23,7 @@ const usernameError = ref('')
 const passwordError = ref('')
 const confirmPasswordError = ref('')
 const loginError = ref('')
+const showForgotPasswordModal = ref(false)
 
 const goBack = () => {
   router.push('/')
@@ -92,50 +94,58 @@ const toggleForm = () => {
   loginError.value = ''
 }
 
-const handleSubmit = () => {
-  loginError.value = ''  // Clear previous login error
+const handleSubmit = async () => {
+  // Reset all errors
+  emailError.value = ''
+  usernameError.value = ''
+  passwordError.value = ''
+  confirmPasswordError.value = ''
+  loginError.value = ''
+
+  // Validate all fields
   validateEmail()
-  if (!isLogin.value) {
-    validateUsername()
-    validateConfirmPassword()
-  }
+  if (!isLogin.value) validateUsername()
   validatePassword()
+  if (!isLogin.value) validateConfirmPassword()
 
-  if (!emailError.value && !passwordError.value &&
-      (isLogin.value || (!usernameError.value && !confirmPasswordError.value))) {
+  // Check if there are any validation errors
+  if (emailError.value || 
+      (!isLogin.value && usernameError.value) || 
+      passwordError.value || 
+      (!isLogin.value && confirmPasswordError.value)) {
+    return
+  }
+
+  try {
     if (isLogin.value) {
-      const account = userStore.accounts.find(acc => 
-        acc.email.toLowerCase() === email.value.toLowerCase() && 
-        acc.password === password.value
-      )
+      // Login
+      const result = await userStore.login({
+        email: email.value,
+        password: password.value
+      })
 
-      if (account) {
-        userStore.login({
-          email: account.email,
-          username: account.username,
-          role: account.role
-        })
-        
-        if (['admin', 'staff', 'manager'].includes(account.role)) {
-          router.push('/management')
-        } else {
-          router.push('/')
-        }
+      if (result.success) {
+        router.push('/')
       } else {
-        loginError.value = 'Invalid email or password, please try again'
+        loginError.value = result.error || 'Login failed. Please check your credentials.'
       }
     } else {
-      // Handle sign up logic here
-      const userData = {
+      // Register
+      const result = await userStore.registerUser({
         email: email.value,
-        username: username.value,
         password: password.value,
-        role: 'user'
+        username: username.value
+      })
+
+      if (result.success) {
+        router.push('/')
+      } else {
+        loginError.value = result.error || 'Registration failed. Please try again.'
       }
-      userStore.mockAccounts.push(userData)
-      userStore.login(userData)
-      router.push('/')
     }
+  } catch (error) {
+    console.error('Authentication error:', error)
+    loginError.value = error.message || 'An error occurred. Please try again.'
   }
 }
 </script>
@@ -163,14 +173,10 @@ const handleSubmit = () => {
 
           <form @submit.prevent="handleSubmit" novalidate>
             <!-- Login Error Message -->
-            <transition name="fade">
-              <div class="form-group login-error-container" v-if="isLogin && loginError">
-                <div class="login-error">
-                  <font-awesome-icon :icon="['fas', 'exclamation-circle']" class="error-icon" />
-                  {{ loginError }}
-                </div>
-              </div>
-            </transition>
+            <div v-if="loginError" class="error-message">
+              <font-awesome-icon :icon="['fas', 'exclamation-circle']" />
+              {{ loginError }}
+            </div>
 
             <!-- Email Field -->
             <div class="form-group">
@@ -235,7 +241,9 @@ const handleSubmit = () => {
             </div>
 
             <!-- Forgot Password Link -->
-            <a href="#" class="forgot-password">Forgot Password?</a>
+            <a href="#" class="forgot-password" @click.prevent="showForgotPasswordModal = true">
+              Forgot Password?
+            </a>
 
             <!-- Submit Button -->
             <button type="submit" class="submit-button">
@@ -253,6 +261,11 @@ const handleSubmit = () => {
         </div>
       </div>
     </div>
+    <!-- Forgot Password Modal -->
+    <ForgotPasswordModal
+      :is-open="showForgotPasswordModal"
+      @close="showForgotPasswordModal = false"
+    />
   </div>
 </template>
 
@@ -410,10 +423,15 @@ input.error {
 }
 
 .error-message {
-  color: #ef5350;
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-  font-weight: 400;
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  padding: 0.75rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .forgot-password {
