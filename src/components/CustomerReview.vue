@@ -74,16 +74,38 @@ const filteredReviews = computed(() => {
 
 // Mark review as read
 const markAsRead = async (review) => {
+  if (review.isRead) return; // Skip if already read
+
   try {
-    isMarkingRead.value = true
-    error.value = null
-    await dataService.markReviewAsRead(review.id)
-    review.isRead = true
-  } catch (error) {
-    console.error('Error marking review as read:', error)
-    error.value = 'Failed to mark review as read. Please try again.'
+    isMarkingRead.value = true;
+    error.value = null;
+
+    // Call the API to mark as read
+    const updatedReview = await dataService.markReviewAsRead(review.id);
+
+    // Update the review in the local state
+    const index = reviews.value.findIndex(r => r.id === review.id);
+    if (index !== -1) {
+      reviews.value[index] = {
+        ...reviews.value[index],
+        ...updatedReview,
+        date: new Date(updatedReview.date) // Ensure date is a Date object
+      };
+    }
+
+    // Optionally refresh all reviews to ensure consistency
+    await fetchReviews();
+
+  } catch (err) {
+    console.error('Error marking review as read:', err);
+    error.value = 'Failed to mark review as read. Please try again.';
+    // Revert the local state change if the API call failed
+    const index = reviews.value.findIndex(r => r.id === review.id);
+    if (index !== -1) {
+      reviews.value[index].isRead = false;
+    }
   } finally {
-    isMarkingRead.value = false
+    isMarkingRead.value = false;
   }
 }
 
@@ -207,11 +229,15 @@ onMounted(() => {
           <div v-for="review in filteredReviews"
                :key="review.id"
                class="review-card"
-               :class="{ 'unread': !review.isRead }">
+               :class="{ 'read': review.isRead, 'unread': !review.isRead }">
             <div class="review-header">
               <div class="user-info">
                 <font-awesome-icon :icon="['fas', 'user-circle']" class="user-icon" />
                 <h3>{{ review.username }}</h3>
+                <span v-if="review.isRead" class="read-status">
+                  <font-awesome-icon :icon="['fas', 'check-circle']" class="read-icon" />
+                  Read
+                </span>
               </div>
               <div class="rating">
                 <span class="stars">{{ renderStars(review.rating) }}</span>
@@ -226,6 +252,9 @@ onMounted(() => {
               <div class="review-footer">
                 <div class="review-date">
                   {{ formatDate(review.date) }}
+                  <span v-if="review.readAt" class="read-date">
+                    (Read on {{ formatDate(review.readAt) }})
+                  </span>
                 </div>
                 <div class="review-actions">
                   <button v-if="!review.isRead"
@@ -234,14 +263,13 @@ onMounted(() => {
                           :disabled="isMarkingRead"
                           title="Mark as Read">
                     <font-awesome-icon :icon="['fas', 'check']" />
-                    {{ isMarkingRead ? '...' : '' }}
+                    <span class="btn-text">{{ isMarkingRead ? 'Marking...' : 'Mark as Read' }}</span>
                   </button>
                   <button @click="deleteReview(review)"
                           class="action-btn delete-btn"
                           :disabled="isDeleting"
                           title="Delete Review">
                     <font-awesome-icon :icon="['fas', 'trash']" />
-                    {{ isDeleting ? '...' : '' }}
                   </button>
                 </div>
               </div>
@@ -256,15 +284,15 @@ onMounted(() => {
           <h3>Delete Review</h3>
           <p>Are you sure you want to delete this review?</p>
           <div class="modal-actions">
-            <button 
-              @click="confirmDelete" 
-              class="delete-btn" 
+            <button
+              @click="confirmDelete"
+              class="delete-btn"
               :disabled="isDeleting"
             >
               {{ isDeleting ? 'Deleting...' : 'Delete' }}
             </button>
-            <button 
-              @click="cancelDelete" 
+            <button
+              @click="cancelDelete"
               class="cancel-btn"
               :disabled="isDeleting"
             >
@@ -328,15 +356,14 @@ h2 {
 }
 
 .review-card {
-  background: white;
-  border: 1px solid #d7ccc8;
+  background: #fff;
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.review-card.unread {
-  border-left: 4px solid #8d6e63;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+  border-left: 4px solid transparent;
 }
 
 .review-header {
@@ -344,71 +371,157 @@ h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #d7ccc8;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #EFEBE9;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
+}
+
+.user-info h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #5D4037;
 }
 
 .user-icon {
-  color: #8d6e63;
+  color: #8D6E63;
   font-size: 1.5rem;
 }
 
+.rating {
+  display: flex;
+  align-items: center;
+}
+
 .stars {
-  color: #ffd700;
+  color: #FFB300;
+  letter-spacing: 2px;
 }
 
 .review-content {
-  color: #5d4037;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .product-name {
-  margin-bottom: 0.5rem;
-  color: #8d6e63;
+  font-size: 1rem;
+  color: #5D4037;
+}
+
+.product-name strong {
+  color: #8D6E63;
+  margin-right: 0.5rem;
 }
 
 .review-text {
-  margin-bottom: 1rem;
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #424242;
+  margin: 0.5rem 0;
 }
 
 .review-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #EFEBE9;
 }
 
 .review-date {
-  color: #8d6e63;
-  font-size: 0.9em;
+  font-size: 0.9rem;
+  color: #795548;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .review-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.review-card.unread {
+  border-left-color: #8D6E63;
+  background-color: #FFF8E1;
+}
+
+.review-card.read {
+  border-left-color: #4CAF50;
+  opacity: 0.85;
+}
+
+.read-status {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 1rem;
+  padding: 0.25rem 0.75rem;
+  background-color: #E8F5E9;
+  color: #4CAF50;
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+
+.read-icon {
+  margin-right: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.read-date {
+  font-size: 0.85rem;
+  color: #666;
+  margin-left: 0.5rem;
 }
 
 .action-btn {
-  padding: 0.5rem;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
   border-radius: 4px;
+  border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .read-btn {
-  background-color: #4CAF50;
+  background-color: #8D6E63;
   color: white;
 }
 
+.read-btn:hover {
+  background-color: #795548;
+}
+
+.read-btn:disabled {
+  background-color: #D7CCC8;
+  cursor: not-allowed;
+}
+
+.btn-text {
+  margin-left: 0.5rem;
+}
+
 .delete-btn {
-  background-color: #f44336;
+  background-color: #ef5350;
   color: white;
+  margin-left: 0.5rem;
+}
+
+.delete-btn:hover {
+  background-color: #e53935;
+}
+
+.delete-btn:disabled {
+  background-color: #FFCDD2;
+  cursor: not-allowed;
 }
 
 .modal-overlay {
