@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted} from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faPen, faTrash, faSort, faSortUp, faSortDown, faPlus, faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -17,6 +17,25 @@ const currentPage = ref(1)
 const itemsPerPage = 5
 const deleteError = ref('')
 const showDeleteError = ref(false)
+const loading = ref(false)
+const error = ref(null)
+const newUser = ref({
+  email: '',
+  password: '',
+  username: '',
+  role: ''
+})
+
+onMounted(async () => {
+  try {
+    loading.value = true
+    users.value = await userStore.getAllUsers()
+  } catch (err) {
+    error.value = 'Failed to load users'
+  } finally {
+    loading.value = false
+  }
+})
 
 const showError = (message) => {
   deleteError.value = message
@@ -27,16 +46,24 @@ const showError = (message) => {
   }, 3000)
 }
 
-// Get accounts from store
-const accounts = computed(() => userStore.accounts)
+// Get users from store
+const users = computed(() => userStore.users)
 
 // Filtered and sorted users
 const filteredUsers = computed(() => {
+  if (!users.value) return []
+
   // Create a new array to avoid modifying the original
-  let filtered = [...accounts.value].filter(user => {
-    const matchName = user.username.toLowerCase().includes(nameFilter.value.toLowerCase())
-    const matchEmail = user.email.toLowerCase().includes(emailFilter.value.toLowerCase())
+  let filtered = [...users.value].filter(user => {
+    const username = user.username?.toLowerCase() ?? ''
+    const email = user.email?.toLowerCase() ?? ''
+    const searchName = nameFilter.value.toLowerCase()
+    const searchEmail = emailFilter.value.toLowerCase()
+
+    const matchName = username.includes(searchName)
+    const matchEmail = email.includes(searchEmail)
     const matchRole = !roleFilter.value || user.role === roleFilter.value
+
     return matchName && matchEmail && matchRole
   })
 
@@ -54,7 +81,10 @@ const filteredUsers = computed(() => {
     })
   }
 
-  return filtered
+  // Calculate pagination
+  const startIndex = (currentPage.value - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  return filtered.slice(startIndex, endIndex)
 })
 
 // Paginated users
@@ -80,20 +110,14 @@ const editingUser = ref({
 const errors = ref({
   username: '',
   email: '',
-  role: '',
-  password: ''
+  password: '',
+  role: ''
 })
 
 const showDeleteModal = ref(false)
 const userToDelete = ref(null)
 
 const showCreateModal = ref(false)
-const newUser = ref({
-  username: '',
-  email: '',
-  password: '',
-  role: ''
-})
 
 const showPassword = ref(false)
 
@@ -117,21 +141,27 @@ const cancelEdit = () => {
   }
 }
 
-const confirmEdit = () => {
-  const isValid = validateForm()
-  if (!isValid) return
-
-  const index = accounts.value.findIndex(u => u.id === editingUser.value.id)
-  if (index !== -1) {
-    accounts.value[index] = { ...editingUser.value }
-  }
-  showEditModal.value = false
-  errors.value = {
-    username: '',
-    email: '',
-    role: ''
+async function confirmEdit() {
+  if (!validateForm()) return
+  try {
+    loading.value = true
+    const updatedUser = await userStore.updateUser(editingUser.value.id, {
+      email: editingUser.value.email,
+      username: editingUser.value.username,
+      role: editingUser.value.role
+    })
+    const index = users.value.findIndex(u => u.id === updatedUser.id)
+    if (index !== -1) {
+      users.value[index] = { ...users.value[index], ...updatedUser }
+    }
+    showEditModal.value = false
+  } catch (err) {
+    error.value = 'Failed to update user'
+  } finally {
+    loading.value = false
   }
 }
+
 
 const validateForm = () => {
   let isValid = true
@@ -161,8 +191,8 @@ const validateForm = () => {
 }
 
 const deleteUser = (user) => {
-  if (user.role === 'admin') {
-    showError('Admin account cannot be deleted')
+  if (user.role === 'management') {
+    showError('Management account cannot be deleted')
     return
   }
   // Create a complete copy of the user object with ID
@@ -176,23 +206,17 @@ const deleteUser = (user) => {
   showDeleteModal.value = true
 }
 
-const confirmDelete = () => {
-  if (!userToDelete.value || userToDelete.value.role === 'admin') {
-    showError('Cannot delete this account')
+async function confirmDelete() {
+  try {
+    loading.value = true
+    await userStore.deleteUser(userToDelete.value.id)
+    users.value = users.value.filter(u => u.id !== userToDelete.value.id)
     showDeleteModal.value = false
-    userToDelete.value = null
-    return
+  } catch (err) {
+    error.value = 'Failed to delete user'
+  } finally {
+    loading.value = false
   }
-
-  console.log('Attempting to delete user:', userToDelete.value)  // Debug log
-  const success = userStore.deleteAccount(userToDelete.value.id)
-
-  if (!success) {
-    showError('Failed to delete account')
-  }
-
-  showDeleteModal.value = false
-  userToDelete.value = null
 }
 
 const cancelDelete = () => {
@@ -218,7 +242,6 @@ const handleSubmit = (e) => {
 
 const validateField = (field) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z]).{8,}$/
 
   switch (field) {
     case 'username':
@@ -244,8 +267,8 @@ const validateField = (field) => {
     case 'password':
       if (!newUser.value.password) {
         errors.value.password = 'Password is required'
-      } else if (!passwordRegex.test(newUser.value.password)) {
-        errors.value.password = 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character'
+      } else if (newUser.value.password.length < 6) {
+        errors.value.password = 'Password must be at least 6 characters'
       } else {
         errors.value.password = ''
       }
@@ -261,20 +284,26 @@ const validateField = (field) => {
   }
 }
 
-const createUser = async () => {
+async function createUser() {
+  if (!validateForm()) return
   try {
-    // Add your API call here to create the user
-    const createdUser = {
-      id: accounts.value.length + 1,
-      ...newUser.value,
-    }
-    accounts.value.push(createdUser)
+    loading.value = true
+    const createdUser = await userStore.createNewUser({
+      email: newUser.value.email,
+      password: newUser.value.password,
+      username: newUser.value.username,
+      role: newUser.value.role
+    })
+    users.value.push(createdUser)
     showCreateModal.value = false
     resetCreateForm()
-  } catch (error) {
-    console.error('Error creating user:', error)
+  } catch (err) {
+    error.value = 'Failed to create user'
+  } finally {
+    loading.value = false
   }
 }
+
 
 const cancelCreate = () => {
   showCreateModal.value = false
@@ -288,7 +317,12 @@ const resetCreateForm = () => {
     password: '',
     role: ''
   }
-  errors.value = {}
+  errors.value = {
+    username: '',
+    email: '',
+    password: '',
+    role: ''
+  }
 }
 
 const togglePasswordVisibility = () => {
@@ -329,6 +363,8 @@ const sortBy = (field) => {
 
 <template>
   <div class="users-container">
+    <div v-if="error" class="error-message">{{ error }}</div>
+    <div v-if="loading" class="loading">Loading...</div>
     <div v-if="showDeleteError" class="error-message">
       {{ deleteError }}
     </div>
@@ -358,9 +394,7 @@ const sortBy = (field) => {
             class="role-select"
           >
             <option value="">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
+            <option value="management">Management</option>
             <option value="user">User</option>
           </select>
         </div>
@@ -506,9 +540,8 @@ const sortBy = (field) => {
             :class="{ 'error': errors.role }"
           >
             <option value="">Select role</option>
-            <option value="admin">Admin</option>
-            <option value="manager">Manager</option>
-            <option value="staff">Staff</option>
+            <option value="management">Management</option>
+            <option value="user">User</option>
           </select>
           <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
         </div>
@@ -591,9 +624,8 @@ const sortBy = (field) => {
               @change="validateField('role')"
             >
               <option value="">Select role</option>
-              <option value="admin">Admin</option>
-              <option value="manager">Manager</option>
-              <option value="staff">Staff</option>
+                <option value="management">Management</option>
+                <option value="user">User</option>
             </select>
             <span class="error-message" v-if="errors.role">{{ errors.role }}</span>
           </div>
@@ -619,7 +651,7 @@ const sortBy = (field) => {
   position: fixed;
   top: 20px;
   right: 20px;
-  background-color: #fc0000;
+  background-color: #ffee00;
   color: rgb(255, 255, 255);
   padding: 10px 20px;
   border-radius: 4px;
@@ -782,7 +814,7 @@ const sortBy = (field) => {
   text-transform: capitalize;
 }
 
-.role-badge.admin {
+.role-badge.management {
   background-color: #EF5350;
   color: white;
 }

@@ -1,130 +1,128 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useUserStore } from '@/stores/userStore'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { faUserCircle } from '@fortawesome/free-solid-svg-icons'
+import dataService from '@/services/dataService'
 
 library.add(faUserCircle)
 
 const userStore = useUserStore()
 
+// Loading and error states
+const isLoading = ref(false)
+const error = ref(null)
+const isSubmitting = ref(false)
+const validationErrors = ref([])
+
+// Form data
 const selectedProduct = ref('')
 const productRating = ref(0)
 const productFeedback = ref('')
-const contactForm = ref({
-  name: '',
-  email: '',
-  message: '',
-})
 const showSuccessMessage = ref(false)
 const successTimeout = ref(null)
 
-const ITEMS_PER_PAGE = 4
+// Reviews pagination
 const currentPage = ref(1)
+const itemsPerPage = 5
+const customerReviews = ref([])
 
-const customerReviews = ref([
-  {
-    id: 1,
-    username: 'John Doe',
-    rating: 5,
-    productName: 'Milky Strawberry',
-    description: 'Absolutely delicious! Perfect blend of flavors.',
-    date: new Date('2024-02-20T10:30:00')
-  },
-  {
-    id: 2,
-    username: 'Jane Smith',
-    rating: 4,
-    productName: 'Dream Latte',
-    description: 'Great coffee, very smooth and aromatic.',
-    date: new Date('2024-02-19T15:45:00')
-  },
-  {
-    id: 3,
-    username: 'Mike Johnson',
-    rating: 5,
-    productName: 'Caramel Macchiato',
-    description: 'Best caramel macchiato I\'ve ever had! Will definitely order again.',
-    date: new Date('2024-02-18T09:15:00')
-  },
-  {
-    id: 4,
-    username: 'Sarah Wilson',
-    rating: 3,
-    productName: 'Dark Chocolate',
-    description: 'Good but could be a bit sweeter.',
-    date: new Date('2024-02-17T14:20:00')
-  },
-  {
-    id: 5,
-    username: 'David Brown',
-    rating: 5,
-    productName: 'Dreamy Yogurt',
-    description: 'Fresh and creamy! Love the fruit toppings.',
-    date: new Date('2024-02-16T11:30:00')
-  },
-  {
-    id: 6,
-    username: 'Emma Davis',
-    rating: 4,
-    productName: 'Hot Dark Chocolate',
-    description: 'Perfect for cold days. Rich and warming.',
-    date: new Date('2024-02-15T16:45:00')
-  }
-])
+// Products data
+const products = ref([])
 
-// Pagination computed properties
-const totalPages = computed(() => {
-  return Math.ceil(customerReviews.value.length / ITEMS_PER_PAGE)
-})
-
+// Computed properties for pagination
+const totalPages = computed(() => Math.ceil(customerReviews.value.length / itemsPerPage))
 const paginatedReviews = computed(() => {
-  const start = (currentPage.value - 1) * ITEMS_PER_PAGE
-  const end = start + ITEMS_PER_PAGE
+  const start = (currentPage.value - 1) * itemsPerPage
+  const end = start + itemsPerPage
   return customerReviews.value.slice(start, end)
 })
 
-const displayedPageNumbers = computed(() => {
-  if (totalPages.value <= 5) {
-    return Array.from({ length: totalPages.value }, (_, i) => i + 1)
+// Fetch products for the dropdown
+const fetchProducts = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
+    products.value = await dataService.fetchMenuData()
+  } catch (error) {
+    console.error('Error fetching products:', error)
+    error.value = 'Failed to load products. Please try again later.'
+  } finally {
+    isLoading.value = false
   }
-
-  let pages = []
-  // Always show first page
-  pages.push(1)
-
-  // Calculate middle pages
-  let middleStart = Math.max(2, currentPage.value - 1)
-  let middleEnd = Math.min(totalPages.value - 1, currentPage.value + 1)
-
-  // Adjust if at the start
-  if (currentPage.value <= 3) {
-    middleStart = 2
-    middleEnd = 4
-  }
-  // Adjust if at the end
-  else if (currentPage.value >= totalPages.value - 2) {
-    middleStart = totalPages.value - 3
-    middleEnd = totalPages.value - 1
-  }
-
-  // Add middle pages
-  for (let i = middleStart; i <= middleEnd; i++) {
-    pages.push(i)
-  }
-
-  // Always show last page
-  pages.push(totalPages.value)
-
-  return pages
-})
-
-// Pagination methods
-const goToPage = (page) => {
-  currentPage.value = page
 }
 
+// Fetch reviews
+const fetchReviews = async () => {
+  try {
+    isLoading.value = true
+    error.value = null
+    const reviewsData = await dataService.fetchReviews()
+    customerReviews.value = reviewsData.map(review => ({
+      ...review,
+      date: new Date(review.date)
+    }))
+  } catch (error) {
+    console.error('Error fetching reviews:', error)
+    error.value = 'Failed to load reviews. Please try again later.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Submit review
+const submitProductReview = async () => {
+  try {
+    validationErrors.value = []
+    error.value = null
+
+    const reviewData = {
+      username: userStore.user ? userStore.user.username : 'Anonymous',
+      productName: selectedProduct.value,
+      rating: parseInt(productRating.value),
+      description: productFeedback.value.trim(),
+      userId: userStore.user ? userStore.user.id : null
+    }
+
+    console.log('Preparing to submit review:', reviewData); // Debug log
+
+    // Validate review data
+    const errors = dataService.validateReview(reviewData)
+    if (errors.length > 0) {
+      validationErrors.value = errors
+      console.log('Validation errors:', errors); // Debug log
+      return
+    }
+
+    isSubmitting.value = true
+
+    const response = await dataService.submitReview(reviewData)
+    console.log('Review submitted successfully:', response); // Debug log
+
+    // Reset form
+    selectedProduct.value = ''
+    productRating.value = 0
+    productFeedback.value = ''
+
+    // Show success message
+    showSuccessMessage.value = true
+    if (successTimeout.value) clearTimeout(successTimeout.value)
+    successTimeout.value = setTimeout(() => {
+      showSuccessMessage.value = false
+    }, 3000)
+
+    // Refresh reviews
+    await fetchReviews()
+  } catch (err) {
+    console.error('Error in submitProductReview:', err);
+    error.value = err.response?.data?.error || 'Failed to submit review. Please try again.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+// Pagination methods
 const prevPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--
@@ -137,6 +135,11 @@ const nextPage = () => {
   }
 }
 
+const goToPage = (page) => {
+  currentPage.value = page
+}
+
+// Format date
 const formatDate = (date) => {
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
@@ -145,51 +148,24 @@ const formatDate = (date) => {
   })
 }
 
-const renderStars = (rating) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
-
-const generateId = () => {
-  return Math.max(0, ...customerReviews.value.map(r => r.id)) + 1
+// Render stars
+const renderStars = (rating) => {
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating)
 }
 
-const submitProductReview = () => {
-  // Validate inputs
-  if (!selectedProduct.value || !productRating.value || !productFeedback.value) {
-    alert('Please fill in all fields')
-    return
-  }
+// Lifecycle hooks
+onMounted(async () => {
+  await Promise.all([
+    fetchProducts(),
+    fetchReviews()
+  ])
+})
 
-  // Create new review object
-  const newReview = {
-    id: generateId(),
-    username: userStore.isLoggedIn ? userStore.username : 'Anonymous',
-    rating: productRating.value,
-    productName: selectedProduct.value,
-    description: productFeedback.value,
-    date: new Date()
-  }
-
-  // Add to beginning of reviews array to show newest first
-  customerReviews.value.unshift(newReview)
-
-  // Reset form
-  selectedProduct.value = ''
-  productRating.value = 0
-  productFeedback.value = ''
-
-  // Show success message
-  showSuccessMessage.value = true
-
-  // Clear success message after 3 seconds
-  if (successTimeout.value) {
-    clearTimeout(successTimeout.value)
-  }
-  successTimeout.value = setTimeout(() => {
-    showSuccessMessage.value = false
-  }, 3000)
-
-  // Go to first page to show the new review
-  currentPage.value = 1
-}
+const contactForm = ref({
+  name: '',
+  email: '',
+  message: '',
+})
 
 const submitContact = () => {
   console.log('Contact Form:', contactForm.value)
@@ -203,45 +179,122 @@ const submitContact = () => {
 
 <template>
   <div class="review-container">
-    <div class="review-sections">
+    <!-- Error Message -->
+    <div v-if="error" class="error-message">
+      {{ error }}
+      <button @click="fetchReviews" class="retry-btn">Retry</button>
+    </div>
+
+    <div class="review-sections" :class="{ 'is-loading': isLoading }">
       <!-- Left Side - Product Review and Contact Form -->
       <div class="left-section">
         <!-- Product Review Section -->
         <div class="product-review-section">
           <h2>Product Review</h2>
-          <select v-model="selectedProduct" class="product-dropdown" required>
-            <option value="">Select a product</option>
-            <option value="Milky Strawberry">Milky Strawberry</option>
-            <option value="Dream Latte">Dream Latte</option>
-            <option value="Caramel Macchiato">Caramel Macchiato</option>
-            <option value="Dark Chocolate">Dark Chocolate</option>
-            <option value="Dreamy Yogurt">Dreamy Yogurt</option>
-            <option value="Hot Dark Chocolate">Hot Dark Chocolate</option>
-          </select>
-          <div class="star-rating">
-            <div class="stars">
-              <input type="radio" id="star5" name="rating" value="5" v-model="productRating" required />
-              <label for="star5">★</label>
-              <input type="radio" id="star4" name="rating" value="4" v-model="productRating" />
-              <label for="star4">★</label>
-              <input type="radio" id="star3" name="rating" value="3" v-model="productRating" />
-              <label for="star3">★</label>
-              <input type="radio" id="star2" name="rating" value="2" v-model="productRating" />
-              <label for="star2">★</label>
-              <input type="radio" id="star1" name="rating" value="1" v-model="productRating" />
-              <label for="star1">★</label>
+
+          <!-- Validation Errors -->
+          <div v-if="validationErrors.length > 0" class="validation-errors">
+            <ul>
+              <li v-for="(error, index) in validationErrors" :key="index">
+                {{ error }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Loading indicator -->
+          <div v-if="isLoading" class="section-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+          </div>
+
+          <div v-else>
+            <select
+              v-model="selectedProduct"
+              class="product-dropdown"
+              required
+              :disabled="isSubmitting"
+            >
+              <option value="">Select a product</option>
+              <option
+                v-for="product in products"
+                :key="product.id"
+                :value="product.name"
+              >
+                {{ product.name }}
+              </option>
+            </select>
+
+            <div class="star-rating">
+              <div class="stars">
+                <input
+                  type="radio"
+                  id="star5"
+                  name="rating"
+                  value="5"
+                  v-model="productRating"
+                  required
+                  :disabled="isSubmitting"
+                />
+                <label for="star5">★</label>
+                <input
+                  type="radio"
+                  id="star4"
+                  name="rating"
+                  value="4"
+                  v-model="productRating"
+                  :disabled="isSubmitting"
+                />
+                <label for="star4">★</label>
+                <input
+                  type="radio"
+                  id="star3"
+                  name="rating"
+                  value="3"
+                  v-model="productRating"
+                  :disabled="isSubmitting"
+                />
+                <label for="star3">★</label>
+                <input
+                  type="radio"
+                  id="star2"
+                  name="rating"
+                  value="2"
+                  v-model="productRating"
+                  :disabled="isSubmitting"
+                />
+                <label for="star2">★</label>
+                <input
+                  type="radio"
+                  id="star1"
+                  name="rating"
+                  value="1"
+                  v-model="productRating"
+                  :disabled="isSubmitting"
+                />
+                <label for="star1">★</label>
+              </div>
             </div>
+
+            <textarea
+              v-model="productFeedback"
+              placeholder="Share your thoughts about this product... (minimum 10 characters)"
+              class="feedback-textarea"
+              required
+              :disabled="isSubmitting"
+            ></textarea>
+
+            <div class="success-message" v-if="showSuccessMessage">
+              Review submitted successfully!
+            </div>
+
+            <button
+              class="submit-btn"
+              @click="submitProductReview"
+              :disabled="isSubmitting"
+            >
+              {{ isSubmitting ? 'Submitting...' : 'Submit Review' }}
+            </button>
           </div>
-          <textarea
-            v-model="productFeedback"
-            placeholder="Share your thoughts about this product..."
-            class="feedback-textarea"
-            required
-          ></textarea>
-          <div class="success-message" v-if="showSuccessMessage">
-            Review submitted successfully!
-          </div>
-          <button class="submit-btn" @click="submitProductReview">Submit Review</button>
         </div>
 
         <!-- Contact Form Section -->
@@ -262,57 +315,66 @@ const submitContact = () => {
         </div>
       </div>
 
-      <!-- Right Side - Customer Reviews Display -->
-      <div class="customer-reviews">
-        <h2>Customer Reviews</h2>
-        <div class="reviews-grid">
-          <div v-for="review in paginatedReviews" 
-               :key="review.id" 
-               class="review-card">
-            <div class="review-header">
-              <div class="user-info">
-                <font-awesome-icon :icon="['fas', 'user-circle']" class="user-icon" />
-                <h3>{{ review.username }}</h3>
+      <!-- Right Side - Customer Reviews -->
+      <div class="right-section">
+        <div class="customer-reviews">
+          <h2>Customer Reviews</h2>
+
+          <!-- Loading indicator -->
+          <div v-if="isLoading" class="section-loading">
+            <div class="loading-spinner"></div>
+            <p>Loading reviews...</p>
+          </div>
+
+          <div v-else class="reviews-grid">
+            <div v-for="review in paginatedReviews"
+                 :key="review.id"
+                 class="review-card">
+              <div class="review-header">
+                <div class="user-info">
+                  <font-awesome-icon :icon="['fas', 'user-circle']" class="user-icon" />
+                  <h3>{{ review.username || 'Anonymous' }}</h3>
+                </div>
+                <div class="rating">
+                  <span class="stars">{{ renderStars(review.rating) }}</span>
+                </div>
               </div>
-              <div class="rating">
-                <span class="stars">{{ renderStars(review.rating) }}</span>
-              </div>
-            </div>
-            
-            <div class="review-content">
-              <div class="product-name">
-                <strong>Product:</strong> {{ review.productName }}
-              </div>
-              <p class="review-text">{{ review.description }}</p>
-              <div class="review-footer">
-                <div class="review-date">
-                  {{ formatDate(review.date) }}
+
+              <div class="review-content">
+                <div class="product-name">
+                  <strong>Product:</strong> {{ review.productName }}
+                </div>
+                <p class="review-text">{{ review.description }}</p>
+                <div class="review-footer">
+                  <div class="review-date">
+                    {{ formatDate(review.date) }}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Pagination -->
-        <div class="pagination" v-if="totalPages > 1">
-          <button
-            class="page-btn"
-            @click="prevPage"
-            :disabled="currentPage === 1"
-          >&lt;</button>
-          <button
-            v-for="pageNum in displayedPageNumbers"
-            :key="pageNum"
-            :class="['page-btn', { active: currentPage === pageNum }]"
-            @click="goToPage(pageNum)"
-          >
-            {{ pageNum }}
-          </button>
-          <button
-            class="page-btn"
-            @click="nextPage"
-            :disabled="currentPage === totalPages"
-          >&gt;</button>
+          <!-- Pagination -->
+          <div class="pagination" v-if="totalPages > 1">
+            <button
+              class="page-btn"
+              @click="prevPage"
+              :disabled="currentPage === 1"
+            >&lt;</button>
+            <button
+              v-for="pageNum in displayedPageNumbers"
+              :key="pageNum"
+              :class="['page-btn', { active: currentPage === pageNum }]"
+              @click="goToPage(pageNum)"
+            >
+              {{ pageNum }}
+            </button>
+            <button
+              class="page-btn"
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+            >&gt;</button>
+          </div>
         </div>
       </div>
     </div>
@@ -623,6 +685,155 @@ h2 {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.retry-btn {
+  background-color: #c62828;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #b71c1c;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #8d6e63;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading Styles */
+.section-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #8d6e63;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.retry-btn {
+  background-color: #c62828;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #b71c1c;
+}
+
+/* Disabled state styles */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.validation-errors {
+  background-color: #fff3e0;
+  color: #e65100;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  border-left: 4px solid #e65100;
+}
+
+.validation-errors ul {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.validation-errors li {
+  margin-bottom: 0.5rem;
+}
+
+.validation-errors li:last-child {
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faEye, faEdit, faCheck, faTrash, faSearch, faUserSlash } from '@fortawesome/free-solid-svg-icons'
@@ -31,6 +31,10 @@ const currentReceipt = ref({
   orderTime: null,
   customerName: '',
   products: []
+})
+
+onMounted(async () => {
+  await userStore.loadPendingOrders()
 })
 
 // Computed Properties
@@ -146,16 +150,13 @@ const cancelEdit = () => {
   errors.value.status = ''
 }
 
-const confirmEdit = () => {
+const confirmEdit = async () => {
   if (!editingOrder.value.status) {
     errors.value.status = 'Status is required'
     return
   }
 
-  const index = userStore.getPendingOrders.findIndex(o => o.id === editingOrder.value.id)
-  if (index !== -1) {
-    userStore.getPendingOrders[index] = { ...userStore.getPendingOrders[index], status: editingOrder.value.status }
-  }
+  await userStore.updateOrderStatus(editingOrder.value.id, editingOrder.value.status)
   showEditModal.value = false
   editingOrder.value = {
     id: null,
@@ -164,9 +165,8 @@ const confirmEdit = () => {
   errors.value.status = ''
 }
 
-const completeOrder = (order) => {
-  // Update order status to completed
-  order.status = 'Completed'
+const completeOrder = async (order) => {
+  await userStore.updateOrderStatus(order.id, 'Completed')
 }
 
 const viewReceipt = (order) => {
