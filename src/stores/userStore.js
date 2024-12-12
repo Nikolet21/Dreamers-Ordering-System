@@ -7,7 +7,7 @@ import {
   sendPasswordResetEmail,
   updateProfile as updateFirebaseProfile,
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot } from 'firebase/firestore'
+import { doc, setDoc, getDoc, collection, query, where, orderBy, getDocs, onSnapshot, deleteDoc } from 'firebase/firestore'
 import { useRouter } from 'vue-router'
 
 export const useUserStore = defineStore('user', {
@@ -25,10 +25,7 @@ export const useUserStore = defineStore('user', {
     username: (state) => state.user?.displayName || '',
     email: (state) => state.user?.email || '',
     userRole: (state) => state.user?.role || 'user',
-    hasManagementAccess: (state) => {
-      const role = state.user?.role
-      return role === 'admin' || role === 'manager' || role === 'staff'
-    },
+    hasManagementAccess: (state) => state.user?.role === 'management',
     getPendingOrders: (state) => state.pendingOrders
   },
 
@@ -68,48 +65,6 @@ export const useUserStore = defineStore('user', {
 
     async login({ email, password }) {
       try {
-        // Hardcoded management accounts
-        const managementAccounts = {
-          'admin@dreamers.com': {
-            password: 'Admin@2024',
-            role: 'admin',
-            displayName: 'Admin User'
-          },
-          'manager@dreamers.com': {
-            password: 'Manager@2024',
-            role: 'manager',
-            displayName: 'Manager User'
-          },
-          'staff@dreamers.com': {
-            password: 'Staff@2024',
-            role: 'staff',
-            displayName: 'Staff User'
-          }
-        };
-
-        // Check if it's a hardcoded management account
-        if (managementAccounts[email]) {
-          if (managementAccounts[email].password === password) {
-            this.user = {
-              email,
-              displayName: managementAccounts[email].displayName,
-              role: managementAccounts[email].role,
-              uid: email // Using email as uid for hardcoded accounts
-            };
-            this.isAuthenticated = true;
-            this.persistUserData(); // Add persistence for hardcoded accounts
-            await this.loadPendingOrders(); // Load pending orders
-            return {
-              success: true,
-              redirect: '/management'
-            };
-          }
-          return {
-            success: false,
-            error: 'Invalid credentials'
-          };
-        }
-
         // Regular user login
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
@@ -121,8 +76,20 @@ export const useUserStore = defineStore('user', {
         };
         this.isAuthenticated = true;
         this.persistUserData();
-        await this.loadPendingOrders(); // Load pending orders
-        return { success: true };
+        await this.loadPendingOrders();
+
+        // Redirect based on role
+        if (userData?.role === 'management') {
+          return {
+            success: true,
+            redirect: '/management'
+          };
+        }
+
+        return {
+          success: true,
+          redirect: '/'
+        };
       } catch (error) {
         console.error('Login error:', error);
         return {
@@ -264,10 +231,8 @@ export const useUserStore = defineStore('user', {
             id: doc.id
           }));
 
-          // Filter for current user's orders
-          this.pendingOrders = allOrders.filter(order =>
-            order.userId === (this.user?.uid || 'guest')
-          );
+          // Assign all orders directly without filtering
+          this.pendingOrders = allOrders;
         });
 
         return { success: true };

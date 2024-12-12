@@ -224,8 +224,9 @@ const cancelDelete = () => {
   userToDelete.value = null
 }
 
-const handleSubmit = (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault()
+  error.value = null
 
   // Validate all fields
   validateField('username')
@@ -237,55 +238,6 @@ const handleSubmit = (e) => {
   const hasErrors = Object.values(errors.value).some(error => error !== '')
   if (hasErrors) return
 
-  createUser()
-}
-
-const validateField = (field) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-  switch (field) {
-    case 'username':
-      if (!newUser.value.username.trim()) {
-        errors.value.username = 'Username is required'
-      } else if (newUser.value.username.trim().length < 2) {
-        errors.value.username = 'Username must be at least 2 characters'
-      } else {
-        errors.value.username = ''
-      }
-      break
-
-    case 'email':
-      if (!newUser.value.email.trim()) {
-        errors.value.email = 'Email is required'
-      } else if (!emailRegex.test(newUser.value.email)) {
-        errors.value.email = 'Please enter a valid email address'
-      } else {
-        errors.value.email = ''
-      }
-      break
-
-    case 'password':
-      if (!newUser.value.password) {
-        errors.value.password = 'Password is required'
-      } else if (newUser.value.password.length < 6) {
-        errors.value.password = 'Password must be at least 6 characters'
-      } else {
-        errors.value.password = ''
-      }
-      break
-
-    case 'role':
-      if (!newUser.value.role) {
-        errors.value.role = 'Role is required'
-      } else {
-        errors.value.role = ''
-      }
-      break
-  }
-}
-
-async function createUser() {
-  if (!validateForm()) return
   try {
     loading.value = true
     const createdUser = await userStore.createNewUser({
@@ -294,15 +246,91 @@ async function createUser() {
       username: newUser.value.username,
       role: newUser.value.role
     })
-    users.value.push(createdUser)
+
+    // Refresh the users list
+    await userStore.getAllUsers()
     showCreateModal.value = false
     resetCreateForm()
   } catch (err) {
-    error.value = 'Failed to create user'
+    console.error('Error creating user:', err)
+    error.value = err.message || 'Failed to create user. Please try again.'
   } finally {
     loading.value = false
   }
 }
+
+const validateField = (field) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const value = newUser.value[field]?.trim() || ''
+
+  switch (field) {
+    case 'username':
+      if (!value) {
+        errors.value.username = 'Username is required'
+      } else if (value.length < 2) {
+        errors.value.username = 'Username must be at least 2 characters'
+      } else if (value.length > 50) {
+        errors.value.username = 'Username must be less than 50 characters'
+      } else {
+        errors.value.username = ''
+      }
+      break
+
+    case 'email':
+      if (!value) {
+        errors.value.email = 'Email is required'
+      } else if (!emailRegex.test(value)) {
+        errors.value.email = 'Please enter a valid email address'
+      } else {
+        errors.value.email = ''
+      }
+      break
+
+    case 'password':
+      if (!value) {
+        errors.value.password = 'Password is required'
+      } else if (value.length < 8) {
+        errors.value.password = 'Password must be at least 8 characters'
+      } else if (!/[A-Z]/.test(value)) {
+        errors.value.password = 'Password must contain at least one uppercase letter'
+      } else if (!/[0-9]/.test(value)) {
+        errors.value.password = 'Password must contain at least one number'
+      } else {
+        errors.value.password = ''
+      }
+      break
+
+      case 'role':
+      if (!value) {
+        errors.value.role = 'Role is required'
+      } else if (!['management', 'user'].includes(value)) {
+        errors.value.role = 'Invalid role selected'
+      } else {
+        errors.value.role = ''
+      }
+      break
+      }
+}
+
+// async function createUser() {
+//   if (!validateForm()) return
+//   try {
+//     loading.value = true
+//     const createdUser = await userStore.createNewUser({
+//       email: newUser.value.email,
+//       password: newUser.value.password,
+//       username: newUser.value.username,
+//       role: newUser.value.role
+//     })
+//     users.value.push(createdUser)
+//     showCreateModal.value = false
+//     resetCreateForm()
+//   } catch (err) {
+//     error.value = 'Failed to create user'
+//   } finally {
+//     loading.value = false
+//   }
+// }
 
 
 const cancelCreate = () => {
