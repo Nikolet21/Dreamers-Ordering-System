@@ -51,26 +51,37 @@ const validateUsername = () => {
 }
 
 const validatePassword = () => {
-  const passwordRegex = /^(?=.*[!@#$%^&*])(?=.*[0-9])(?=.*[A-Z]).{8,}$/
-
+  passwordError.value = ''
   if (!password.value) {
     passwordError.value = 'Password is required'
-  } else if (!passwordRegex.test(password.value)) {
-    passwordError.value =
-      'Password must be at least 8 characters, include an uppercase letter, a number, and a special character'
-  } else {
-    passwordError.value = ''
+    return false
   }
+  if (password.value.length < 6) {
+    passwordError.value = 'Password must be at least 6 characters long'
+    return false
+  }
+  if (password.value.includes(' ')) {
+    passwordError.value = 'Password cannot contain spaces'
+    return false
+  }
+  return true
 }
 
 const validateConfirmPassword = () => {
+  confirmPasswordError.value = ''
   if (!confirmPassword.value) {
     confirmPasswordError.value = 'Please confirm your password'
-  } else if (confirmPassword.value !== password.value) {
-    confirmPasswordError.value = 'Passwords do not match'
-  } else {
-    confirmPasswordError.value = ''
+    return false
   }
+  if (confirmPassword.value !== password.value) {
+    confirmPasswordError.value = 'Passwords do not match'
+    return false
+  }
+  if (confirmPassword.value.includes(' ')) {
+    confirmPasswordError.value = 'Password cannot contain spaces'
+    return false
+  }
+  return true
 }
 
 const togglePasswordVisibility = () => {
@@ -95,24 +106,27 @@ const toggleForm = () => {
 }
 
 const handleSubmit = async () => {
-  // Reset all errors
+  // Reset errors
   emailError.value = ''
   usernameError.value = ''
   passwordError.value = ''
   confirmPasswordError.value = ''
-  loginError.value = ''
 
-  // Validate all fields
-  validateEmail()
-  if (!isLogin.value) validateUsername()
-  validatePassword()
-  if (!isLogin.value) validateConfirmPassword()
+  let isValid = true
 
-  // Check if there are any validation errors
-  if (emailError.value ||
-      (!isLogin.value && usernameError.value) ||
-      passwordError.value ||
-      (!isLogin.value && confirmPasswordError.value)) {
+  if (isLogin.value) {
+    // Login validation
+    if (!validateEmail()) isValid = false
+    if (!validatePassword()) isValid = false
+  } else {
+    // Sign up validation
+    if (!validateEmail()) isValid = false
+    if (!validateUsername()) isValid = false
+    if (!validatePassword()) isValid = false
+    if (!validateConfirmPassword()) isValid = false
+  }
+
+  if (!isValid) {
     return
   }
 

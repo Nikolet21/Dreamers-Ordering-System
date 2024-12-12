@@ -286,7 +286,7 @@ const validateField = (field) => {
       }
       break
 
-    case 'password':
+      case 'password':
       if (!value) {
         errors.value.password = 'Password is required'
       } else if (value.length < 8) {
@@ -295,6 +295,8 @@ const validateField = (field) => {
         errors.value.password = 'Password must contain at least one uppercase letter'
       } else if (!/[0-9]/.test(value)) {
         errors.value.password = 'Password must contain at least one number'
+      } else if (value.includes(' ')) {
+        errors.value.password = 'Password cannot contain spaces'
       } else {
         errors.value.password = ''
       }
