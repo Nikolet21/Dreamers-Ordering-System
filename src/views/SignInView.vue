@@ -109,9 +109,9 @@ const handleSubmit = async () => {
   if (!isLogin.value) validateConfirmPassword()
 
   // Check if there are any validation errors
-  if (emailError.value || 
-      (!isLogin.value && usernameError.value) || 
-      passwordError.value || 
+  if (emailError.value ||
+      (!isLogin.value && usernameError.value) ||
+      passwordError.value ||
       (!isLogin.value && confirmPasswordError.value)) {
     return
   }
@@ -125,13 +125,13 @@ const handleSubmit = async () => {
       })
 
       if (result.success) {
-        // Navigate to the redirect path if provided, otherwise go to home
-        router.push(result.redirect || '/')
+        // Use the redirect path from the login result
+        router.push(result.redirect)
       } else {
         loginError.value = result.error || 'Login failed. Please check your credentials.'
       }
     } else {
-      // Register
+      // Register (always as regular user)
       const result = await userStore.registerUser({
         email: email.value,
         password: password.value,

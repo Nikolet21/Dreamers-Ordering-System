@@ -69,7 +69,6 @@ const handleLogout = () => {
         <div v-if="isProfileOpen" class="profile-dropdown">
           <div class="profile-info">
             <p class="username">{{ userStore.username }}</p>
-            <p class="email">{{ userStore.email }}</p>
           </div>
           <div class="dropdown-divider"></div>
           <button class="dropdown-item" @click="openProfileModal">Edit Profile</button>
@@ -222,12 +221,6 @@ header {
   font-weight: 600;
   color: #333;
   margin: 0;
-}
-
-.email {
-  font-size: 0.9em;
-  color: #666;
-  margin: 4px 0 0 0;
 }
 
 .dropdown-divider {
