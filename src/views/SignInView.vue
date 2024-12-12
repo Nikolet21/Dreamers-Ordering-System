@@ -125,7 +125,8 @@ const handleSubmit = async () => {
       })
 
       if (result.success) {
-        router.push('/')
+        // Navigate to the redirect path if provided, otherwise go to home
+        router.push(result.redirect || '/')
       } else {
         loginError.value = result.error || 'Login failed. Please check your credentials.'
       }
