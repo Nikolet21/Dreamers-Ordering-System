@@ -1,10 +1,10 @@
-import express from 'express';
-import cors from 'cors';
-import bodyParser from 'body-parser';
-import admin from 'firebase-admin';
-import { readFile } from 'fs/promises';
-import path from 'path';
-import process from 'process';
+import express from 'express'
+import cors from 'cors'
+import bodyParser from 'body-parser'
+import admin from 'firebase-admin'
+import { readFile } from 'fs/promises'
+import path from 'path'
+import process from 'process'
 
 const serviceAccountKey = JSON.parse(
   await readFile(

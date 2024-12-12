@@ -26,13 +26,15 @@ export default {
 
   async submitReview(reviewData) {
     try {
-      console.log('Submitting review:', reviewData); // Debug log
+      console.log('Submitting review:', reviewData);
       const response = await axios.post(`${API_URL}/reviews`, {
         ...reviewData,
-        isRead: false, // Default to unread for new reviews
-        date: new Date().toISOString()
+        isRead: false,
+        date: new Date().toISOString(),
+        // If user is not authenticated, ensure username is 'Anonymous'
+        username: reviewData.isAuthenticated ? reviewData.username : 'Anonymous'
       });
-      console.log('Review submission response:', response.data); // Debug log
+      console.log('Review submission response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error submitting review:', error.response || error);
@@ -43,12 +45,19 @@ export default {
   async markReviewAsRead(reviewId) {
     try {
       const response = await axios.patch(`${API_URL}/reviews/${reviewId}`, {
-        isRead: true
+        isRead: true,
+        readAt: new Date().toISOString() // Add timestamp for when it was read
       });
-      return response.data;
+
+      // Ensure we return the full review object
+      const updatedReview = response.data;
+      return {
+        ...updatedReview,
+        date: new Date(updatedReview.date) // Ensure date is properly formatted
+      };
     } catch (error) {
       console.error('Error marking review as read:', error);
-      throw error;
+      throw new Error(error.response?.data?.error || 'Failed to mark review as read');
     }
   },
 
@@ -65,11 +74,7 @@ export default {
   validateReview(reviewData) {
     const errors = [];
 
-    // Ensure username is either a non-empty string or explicitly set to 'Anonymous'
-    if (!reviewData.username) {
-      reviewData.username = 'Anonymous';
-    }
-
+    // Username validation not needed as it's handled by authentication status
     if (!reviewData.productName) {
       errors.push('Product selection is required');
     }

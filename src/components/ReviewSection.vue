@@ -25,7 +25,7 @@ const successTimeout = ref(null)
 
 // Reviews pagination
 const currentPage = ref(1)
-const itemsPerPage = 5
+const itemsPerPage = 4
 const customerReviews = ref([])
 
 // Products data
@@ -77,28 +77,28 @@ const submitProductReview = async () => {
     validationErrors.value = []
     error.value = null
 
+    // Get user information from store
+    const currentUser = userStore.currentUser;
+    const username = currentUser?.displayName || 'Anonymous';
+    const userId = currentUser?.uid || null;
+
     const reviewData = {
-      username: userStore.user ? userStore.user.username : 'Anonymous',
+      username: username,
       productName: selectedProduct.value,
       rating: parseInt(productRating.value),
       description: productFeedback.value.trim(),
-      userId: userStore.user ? userStore.user.id : null
+      userId: userId,
+      isAuthenticated: !!currentUser
     }
 
-    console.log('Preparing to submit review:', reviewData); // Debug log
-
-    // Validate review data
-    const errors = dataService.validateReview(reviewData)
-    if (errors.length > 0) {
-      validationErrors.value = errors
-      console.log('Validation errors:', errors); // Debug log
+    if (!validateForm()) {
       return
     }
 
     isSubmitting.value = true
 
     const response = await dataService.submitReview(reviewData)
-    console.log('Review submitted successfully:', response); // Debug log
+    console.log('Review submitted successfully:', response)
 
     // Reset form
     selectedProduct.value = ''
@@ -107,7 +107,9 @@ const submitProductReview = async () => {
 
     // Show success message
     showSuccessMessage.value = true
-    if (successTimeout.value) clearTimeout(successTimeout.value)
+    if (successTimeout.value) {
+      clearTimeout(successTimeout.value)
+    }
     successTimeout.value = setTimeout(() => {
       showSuccessMessage.value = false
     }, 3000)
@@ -115,11 +117,28 @@ const submitProductReview = async () => {
     // Refresh reviews
     await fetchReviews()
   } catch (err) {
-    console.error('Error in submitProductReview:', err);
-    error.value = err.response?.data?.error || 'Failed to submit review. Please try again.'
+    console.error('Error submitting review:', err)
+    error.value = 'Failed to submit review. Please try again.'
   } finally {
     isSubmitting.value = false
   }
+}
+
+// Form validation
+const validateForm = () => {
+  if (!selectedProduct.value.trim()) {
+    validationErrors.value.push('Product selection is required')
+    return false
+  }
+  if (!productRating.value || productRating.value < 1 || productRating.value > 5) {
+    validationErrors.value.push('Rating is required (1-5 stars)')
+    return false
+  }
+  if (!productFeedback.value.trim()) {
+    validationErrors.value.push('Review description is required')
+    return false
+  }
+  return true
 }
 
 // Pagination methods
@@ -133,10 +152,6 @@ const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
   }
-}
-
-const goToPage = (page) => {
-  currentPage.value = page
 }
 
 // Format date
@@ -160,21 +175,6 @@ onMounted(async () => {
     fetchReviews()
   ])
 })
-
-const contactForm = ref({
-  name: '',
-  email: '',
-  message: '',
-})
-
-const submitContact = () => {
-  console.log('Contact Form:', contactForm.value)
-  contactForm.value = {
-    name: '',
-    email: '',
-    message: '',
-  }
-}
 </script>
 
 <template>
@@ -185,196 +185,159 @@ const submitContact = () => {
       <button @click="fetchReviews" class="retry-btn">Retry</button>
     </div>
 
-    <div class="review-sections" :class="{ 'is-loading': isLoading }">
-      <!-- Left Side - Product Review and Contact Form -->
+    <div class="review-layout">
+      <!-- Fixed Left Section - Write Review -->
       <div class="left-section">
-        <!-- Product Review Section -->
         <div class="product-review-section">
-          <h2>Product Review</h2>
-
-          <!-- Validation Errors -->
-          <div v-if="validationErrors.length > 0" class="validation-errors">
-            <ul>
-              <li v-for="(error, index) in validationErrors" :key="index">
-                {{ error }}
-              </li>
-            </ul>
-          </div>
-
-          <!-- Loading indicator -->
-          <div v-if="isLoading" class="section-loading">
-            <div class="loading-spinner"></div>
-            <p>Loading...</p>
-          </div>
-
-          <div v-else>
-            <select
-              v-model="selectedProduct"
-              class="product-dropdown"
-              required
-              :disabled="isSubmitting"
-            >
-              <option value="">Select a product</option>
-              <option
-                v-for="product in products"
-                :key="product.id"
-                :value="product.name"
+          <h2>Write a Review</h2>
+          <form @submit.prevent="submitProductReview" class="review-form">
+            <div class="form-group">
+              <label for="product">Select Product</label>
+              <select
+                id="product"
+                v-model="selectedProduct"
+                :class="{ 'error': validationErrors.includes('Product selection is required') }"
               >
-                {{ product.name }}
-              </option>
-            </select>
+                <option value="">Select a product</option>
+                <option
+                  v-for="product in products"
+                  :key="product.id"
+                  :value="product.name"
+                >
+                  {{ product.name }}
+                </option>
+              </select>
+            </div>
 
-            <div class="star-rating">
-              <div class="stars">
-                <input
-                  type="radio"
-                  id="star5"
-                  name="rating"
-                  value="5"
-                  v-model="productRating"
-                  required
-                  :disabled="isSubmitting"
-                />
-                <label for="star5">★</label>
-                <input
-                  type="radio"
-                  id="star4"
-                  name="rating"
-                  value="4"
-                  v-model="productRating"
-                  :disabled="isSubmitting"
-                />
-                <label for="star4">★</label>
-                <input
-                  type="radio"
-                  id="star3"
-                  name="rating"
-                  value="3"
-                  v-model="productRating"
-                  :disabled="isSubmitting"
-                />
-                <label for="star3">★</label>
-                <input
-                  type="radio"
-                  id="star2"
-                  name="rating"
-                  value="2"
-                  v-model="productRating"
-                  :disabled="isSubmitting"
-                />
-                <label for="star2">★</label>
-                <input
-                  type="radio"
-                  id="star1"
-                  name="rating"
-                  value="1"
-                  v-model="productRating"
-                  :disabled="isSubmitting"
-                />
-                <label for="star1">★</label>
+            <div class="form-group">
+              <label>Rating</label>
+              <div class="star-rating">
+                <div class="stars">
+                  <input
+                    type="radio"
+                    id="star5"
+                    name="rating"
+                    value="5"
+                    v-model="productRating"
+                    :class="{ 'error': validationErrors.includes('Rating is required') }"
+                  />
+                  <label for="star5" title="5 stars">★</label>
+
+                  <input
+                    type="radio"
+                    id="star4"
+                    name="rating"
+                    value="4"
+                    v-model="productRating"
+                  />
+                  <label for="star4" title="4 stars">★</label>
+
+                  <input
+                    type="radio"
+                    id="star3"
+                    name="rating"
+                    value="3"
+                    v-model="productRating"
+                  />
+                  <label for="star3" title="3 stars">★</label>
+
+                  <input
+                    type="radio"
+                    id="star2"
+                    name="rating"
+                    value="2"
+                    v-model="productRating"
+                  />
+                  <label for="star2" title="2 stars">★</label>
+
+                  <input
+                    type="radio"
+                    id="star1"
+                    name="rating"
+                    value="1"
+                    v-model="productRating"
+                  />
+                  <label for="star1" title="1 star">★</label>
+                </div>
               </div>
             </div>
 
-            <textarea
-              v-model="productFeedback"
-              placeholder="Share your thoughts about this product... (minimum 10 characters)"
-              class="feedback-textarea"
-              required
-              :disabled="isSubmitting"
-            ></textarea>
+            <div class="form-group">
+              <label for="feedback">Your Review</label>
+              <textarea
+                id="feedback"
+                v-model="productFeedback"
+                rows="4"
+                :class="{ 'error': validationErrors.includes('Review description is required') }"
+                placeholder="Share your experience with this product..."
+              ></textarea>
+            </div>
 
-            <div class="success-message" v-if="showSuccessMessage">
-              Review submitted successfully!
+            <div v-if="validationErrors.length > 0" class="validation-errors">
+              <p v-for="(error, index) in validationErrors" :key="index">{{ error }}</p>
             </div>
 
             <button
+              type="submit"
               class="submit-btn"
-              @click="submitProductReview"
               :disabled="isSubmitting"
             >
               {{ isSubmitting ? 'Submitting...' : 'Submit Review' }}
             </button>
-          </div>
-        </div>
 
-        <!-- Contact Form Section -->
-        <div class="contact-form">
-          <h2>Contact Us</h2>
-          <form @submit.prevent="submitContact">
-            <div class="form-group">
-              <input type="text" v-model="contactForm.name" placeholder="Your Name" required />
+            <div v-if="showSuccessMessage" class="success-message">
+              Review submitted successfully!
             </div>
-            <div class="form-group">
-              <input type="email" v-model="contactForm.email" placeholder="Your Email" required />
-            </div>
-            <div class="form-group">
-              <textarea v-model="contactForm.message" placeholder="Your Message" required></textarea>
-            </div>
-            <button type="submit" class="submit-btn">Send Message</button>
           </form>
         </div>
       </div>
 
-      <!-- Right Side - Customer Reviews -->
+      <!-- Right Section - Review Grid -->
       <div class="right-section">
-        <div class="customer-reviews">
-          <h2>Customer Reviews</h2>
-
-          <!-- Loading indicator -->
-          <div v-if="isLoading" class="section-loading">
-            <div class="loading-spinner"></div>
-            <p>Loading reviews...</p>
+        <h2>Customer Reviews</h2>
+        <div class="reviews-grid">
+          <div v-if="isLoading" class="loading-spinner">
+            Loading reviews...
           </div>
-
-          <div v-else class="reviews-grid">
+          <template v-else>
             <div v-for="review in paginatedReviews"
-                 :key="review.id"
-                 class="review-card">
+                :key="review.id"
+                class="review-card">
               <div class="review-header">
                 <div class="user-info">
-                  <font-awesome-icon :icon="['fas', 'user-circle']" class="user-icon" />
-                  <h3>{{ review.username || 'Anonymous' }}</h3>
+                  <font-awesome-icon icon="user" class="user-icon" />
+                  <span class="username">{{ review.username }}</span>
                 </div>
                 <div class="rating">
-                  <span class="stars">{{ renderStars(review.rating) }}</span>
+                  {{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}
                 </div>
               </div>
-
               <div class="review-content">
-                <div class="product-name">
-                  <strong>Product:</strong> {{ review.productName }}
-                </div>
+                <div class="product-name">{{ review.productName }}</div>
                 <p class="review-text">{{ review.description }}</p>
-                <div class="review-footer">
-                  <div class="review-date">
-                    {{ formatDate(review.date) }}
-                  </div>
-                </div>
+                <div class="review-date">{{ formatDate(review.date) }}</div>
               </div>
             </div>
-          </div>
+          </template>
+        </div>
 
-          <!-- Pagination -->
-          <div class="pagination" v-if="totalPages > 1">
-            <button
-              class="page-btn"
-              @click="prevPage"
-              :disabled="currentPage === 1"
-            >&lt;</button>
-            <button
-              v-for="pageNum in displayedPageNumbers"
-              :key="pageNum"
-              :class="['page-btn', { active: currentPage === pageNum }]"
-              @click="goToPage(pageNum)"
-            >
-              {{ pageNum }}
-            </button>
-            <button
-              class="page-btn"
-              @click="nextPage"
-              :disabled="currentPage === totalPages"
-            >&gt;</button>
-          </div>
+        <!-- Pagination -->
+        <div class="pagination">
+          <button
+            class="page-btn"
+            @click="prevPage"
+            :disabled="currentPage === 1">
+            Previous
+          </button>
+          <span class="page-info">
+            Page {{ currentPage }} of {{ totalPages }}
+          </span>
+          <button
+            class="page-btn"
+            @click="nextPage"
+            :disabled="currentPage === totalPages">
+            Next
+          </button>
         </div>
       </div>
     </div>
@@ -383,144 +346,267 @@ const submitContact = () => {
 
 <style scoped>
 .review-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: Arial, sans-serif;
-  margin-top: 2rem;
+  max-width: 100%;
+  min-height: calc(100vh - 4rem);
+  background-color: #EFEBE9; /* Add margin for the header */
+  position: relative;
+  overflow-x: hidden;
 }
 
-.review-sections {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.review-layout {
+  display: flex;
   gap: 2rem;
-  min-height: 800px;
+  padding: 2rem;
+  position: relative;
+  min-height: calc(100vh - 80px); /* Adjust for the top margin */
 }
 
 .left-section {
+  position: fixed;
+  left: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  background: white;
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 40px; /* Add margin to account for header */
+  max-height: calc(100vh - 160px); /* Adjust max height to account for margins */
+  overflow-y: auto;
+}
+
+.right-section {
+  margin-left: calc(400px + 4rem);
+  flex: 1;
+  padding: 0 2rem;
+  margin-top: 40px; /* Add matching margin */
+}
+
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.review-card {
+  background: white;
+  border: 1px solid #D7CCC8;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  height: 800px;
 }
 
-h2 {
-  color: #5d4037;
-  margin-bottom: 1.5rem;
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* Star Rating Styles */
-.star-rating {
+.pagination {
   display: flex;
   justify-content: center;
-  margin: 1rem 0;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .reviews-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 1200px) {
+  .review-layout {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .left-section {
+    position: relative;
+    left: 0;
+    top: 0;
+    transform: none;
+    width: 100%;
+    max-width: none;
+    margin-bottom: 2rem;
+    max-height: none;
+    margin-top: 0;
+  }
+
+  .right-section {
+    margin-left: 0;
+    padding: 0;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .reviews-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-layout {
+    padding: 1rem;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}
+
+/* Keep existing styles */
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  color: #3E2723;
+  font-weight: 500;
+}
+
+select,
+input[type="number"],
+textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #8D6E63;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  color: #3E2723;
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #3E2723;
+  box-shadow: 0 0 0 2px rgba(62, 39, 35, 0.1);
+}
+
+select:hover,
+input:hover,
+textarea:hover {
+  border-color: #3E2723;
+}
+
+.star-rating {
+  display: flex;
+  justify-content: flex-start;
+  margin: 0.5rem 0;
+  width: 100%;
 }
 
 .stars {
   display: flex;
   flex-direction: row-reverse;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
-.stars input[type='radio'] {
+.stars input[type="radio"] {
   display: none;
 }
 
 .stars label {
   font-size: 2rem;
-  color: #d7ccc8;
+  color: #D7CCC8;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: color 0.3s ease;
 }
 
 .stars label:hover,
 .stars label:hover ~ label,
-.stars input[type='radio']:checked ~ label {
-  color: #8d6e63;
+.stars input[type="radio"]:checked ~ label {
+  color: #FF9800;
 }
 
-/* Product Review Section Styles */
-.product-review-section {
-  background-color: #efebe9;
-  padding: 2rem;
-  border-radius: 8px;
-  flex: 1;
-  overflow-y: auto;
+.stars input[type="radio"]:checked + label {
+  color: #FF9800;
 }
 
-.product-dropdown {
-  width: 100%;
-  padding: 0.8rem;
-  margin-bottom: 1rem;
-  border: 1px solid #8d6e63;
+.form-group:has(.star-rating) {
+  margin: 1.5rem 0;
+}
+
+.submit-btn {
+  background-color: #3E2723;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
   border-radius: 4px;
-  background-color: white;
-  color: #5d4037;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.feedback-textarea {
-  width: 100%;
-  height: 150px;
-  padding: 0.8rem;
-  margin-bottom: 1rem;
-  border: 1px solid #8d6e63;
+.submit-btn:hover {
+  background-color: #5D4037;
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  background-color: #D7CCC8;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.error {
+  border-color: #ef5350;
+}
+
+.validation-errors {
+  color: #ef5350;
+  font-size: 0.9rem;
+  background-color: #ffebee;
+  padding: 0.75rem;
   border-radius: 4px;
-  resize: vertical;
+  border-left: 4px solid #ef5350;
 }
 
-/* Contact Form Styles */
-.contact-form {
-  background-color: #efebe9;
-  padding: 2rem;
-  border-radius: 8px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 0.8rem;
-  border: 1px solid #8d6e63;
+.success-message {
+  background-color: #4CAF50;
+  color: white;
+  padding: 0.75rem;
   border-radius: 4px;
-}
-
-.form-group textarea {
-  height: 120px;
-  resize: vertical;
-}
-
-/* Customer Reviews Styles */
-.customer-reviews {
-  background-color: #efebe9;
-  padding: 2rem;
-  border-radius: 8px;
-  height: 800px;
-  display: flex;
-  flex-direction: column;
-}
-
-.reviews-grid {
-  flex: 1;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
-  padding-right: 10px;
+  text-align: center;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .review-card {
-  background-color: #efebe9;
-  border: 1px solid #d7ccc8;
+  background: white;
+  border: 1px solid #D7CCC8;
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 1rem;
   transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.review-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .review-header {
@@ -528,317 +614,108 @@ h2 {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #d7ccc8;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #EFEBE9;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0.75rem;
 }
 
 .user-icon {
-  font-size: 2rem;
-  color: #8d6e63;
+  color: #3E2723;
+  font-size: 1.2rem;
 }
 
-.stars {
-  color: #8d6e63;
-  font-size: 1.2em;
+.username {
+  font-weight: 600;
+  color: #3E2723;
+}
+
+.rating {
+  color: #FF9800;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
 }
 
 .review-content {
-  color: #5d4037;
+  color: #5D4037;
 }
 
 .product-name {
-  margin-bottom: 0.8rem;
-  color: #8d6e63;
-  font-weight: 500;
+  font-weight: 600;
+  color: #3E2723;
+  margin-bottom: 0.75rem;
 }
 
 .review-text {
   margin-bottom: 1rem;
-  line-height: 1.5;
-}
-
-.review-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  line-height: 1.6;
 }
 
 .review-date {
-  color: #8d6e63;
-  font-size: 0.9em;
+  color: #8D6E63;
+  font-size: 0.9rem;
+  font-style: italic;
 }
 
-.submit-btn {
-  width: 100%;
-  padding: 0.8rem;
-  background-color: #8d6e63;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.submit-btn:hover {
-  background-color: #6d4c41;
-}
-
-/* Pagination Styles */
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1rem;
   margin-top: 2rem;
 }
 
 .page-btn {
+  background-color: #3E2723;
+  color: white;
+  border: none;
   padding: 0.5rem 1rem;
-  border: 1px solid #8d6e63;
-  background-color: white;
-  color: #5d4037;
+  border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 40px;
-  border-radius: 4px;
+  font-weight: 500;
 }
 
 .page-btn:hover:not(:disabled) {
-  background-color: #8d6e63;
-  color: white;
-}
-
-.page-btn.active {
-  background-color: #5d4037;
-  color: white;
-  border-color: #5d4037;
+  background-color: #5D4037;
+  transform: translateY(-1px);
 }
 
 .page-btn:disabled {
-  opacity: 0.5;
+  background-color: #D7CCC8;
   cursor: not-allowed;
+  transform: none;
 }
 
-/* Scrollbar Styles */
-.reviews-grid::-webkit-scrollbar,
-.product-review-section::-webkit-scrollbar,
-.contact-form::-webkit-scrollbar {
-  width: 8px;
-}
-
-.reviews-grid::-webkit-scrollbar-track,
-.product-review-section::-webkit-scrollbar-track,
-.contact-form::-webkit-scrollbar-track {
-  background: #d7ccc8;
-  border-radius: 4px;
-}
-
-.reviews-grid::-webkit-scrollbar-thumb,
-.product-review-section::-webkit-scrollbar-thumb,
-.contact-form::-webkit-scrollbar-thumb {
-  background: #8d6e63;
-  border-radius: 4px;
-}
-
-.reviews-grid::-webkit-scrollbar-thumb:hover,
-.product-review-section::-webkit-scrollbar-thumb:hover,
-.contact-form::-webkit-scrollbar-thumb:hover {
-  background: #6d4c41;
-}
-
-/* Form Input Styles */
-.name-input {
-  width: 100%;
-  padding: 0.8rem;
-  margin-bottom: 1rem;
-  border: 1px solid #8d6e63;
-  border-radius: 4px;
-  background-color: white;
-  color: #5d4037;
-}
-
-.success-message {
-  background-color: #4CAF50;
-  color: white;
-  padding: 10px;
-  border-radius: 4px;
-  text-align: center;
-  margin-bottom: 1rem;
-  animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.is-loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.error-message {
-  background-color: #ffebee;
-  color: #c62828;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.retry-btn {
-  background-color: #c62828;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.retry-btn:hover {
-  background-color: #b71c1c;
-}
-
-.loading-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
+.page-info {
+  color: #3E2723;
+  font-weight: 500;
 }
 
 .loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #8d6e63;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Loading Styles */
-.section-loading {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   padding: 2rem;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 8px;
-  margin: 1rem 0;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #8d6e63;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 0.5rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.is-loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.error-message {
-  background-color: #ffebee;
-  color: #c62828;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 4px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.retry-btn {
-  background-color: #c62828;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.retry-btn:hover {
-  background-color: #b71c1c;
-}
-
-/* Disabled state styles */
-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-select:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.validation-errors {
-  background-color: #fff3e0;
-  color: #e65100;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border-radius: 4px;
-  border-left: 4px solid #e65100;
-}
-
-.validation-errors ul {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-
-.validation-errors li {
-  margin-bottom: 0.5rem;
-}
-
-.validation-errors li:last-child {
-  margin-bottom: 0;
+  color: #3E2723;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
   .review-sections {
     grid-template-columns: 1fr;
+  }
+
+  .review-container {
+    padding: 1rem;
+  }
+
+  h2 {
+    font-size: 1.5rem;
   }
 }
 </style>

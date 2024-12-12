@@ -19,46 +19,35 @@ const emit = defineEmits(['close', 'update:profile']);
 const userStore = useUserStore();
 const isEditing = ref(false);
 const editedProfile = ref({
-  username: userStore.username,
-  email: userStore.email
+  username: userStore.username
 });
 const errorMessage = ref('');
 
 // Watch for changes in userStore data
 watch(() => userStore.username, (newUsername) => {
-  if (!isEditing.value) {
-    editedProfile.value.username = newUsername;
-  }
+  editedProfile.value.username = newUsername;
 });
 
-watch(() => userStore.email, (newEmail) => {
-  if (!isEditing.value) {
-    editedProfile.value.email = newEmail;
+// Watch for modal open state to reset form
+watch(() => props.isOpen, (newValue) => {
+  if (newValue) {
+    editedProfile.value.username = userStore.username;
+    isEditing.value = false;
+    errorMessage.value = '';
   }
 });
 
 const closeModal = () => {
   isEditing.value = false;
   errorMessage.value = '';
-  editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
-  };
+  editedProfile.value.username = userStore.username;
   emit('close');
 };
 
 const toggleEdit = () => {
   isEditing.value = true;
-  editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
-  };
+  editedProfile.value.username = userStore.username;
   errorMessage.value = '';
-};
-
-const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 };
 
 const validateForm = () => {
@@ -66,45 +55,38 @@ const validateForm = () => {
     errorMessage.value = 'Username cannot be empty';
     return false;
   }
-  if (!editedProfile.value.email.trim()) {
-    errorMessage.value = 'Email cannot be empty';
-    return false;
-  }
-  if (!validateEmail(editedProfile.value.email)) {
-    errorMessage.value = 'Please enter a valid email address';
-    return false;
-  }
   return true;
 };
 
-const saveChanges = () => {
+const saveChanges = async () => {
   if (!validateForm()) {
     return;
   }
 
-  const updatedProfile = {
-    username: editedProfile.value.username.trim(),
-    email: editedProfile.value.email.trim()
-  };
+  try {
+    const result = await userStore.updateProfile({
+      username: editedProfile.value.username.trim()
+    });
 
-  const success = userStore.updateProfile(updatedProfile);
-
-  if (success) {
-    emit('update:profile', updatedProfile);
-    isEditing.value = false;
-    errorMessage.value = '';
-    closeModal();
-  } else {
-    errorMessage.value = 'Failed to update profile. Please try again.';
+    if (result.success) {
+      isEditing.value = false;
+      errorMessage.value = '';
+      // Force a refresh of the profile data
+      editedProfile.value.username = userStore.username;
+      emit('update:profile', { username: editedProfile.value.username });
+      closeModal();
+    } else {
+      errorMessage.value = result.error || 'Failed to update profile. Please try again.';
+    }
+  } catch (error) {
+    errorMessage.value = 'An error occurred while updating profile.';
+    console.error('Profile update error:', error);
   }
 };
 
 const cancelEdit = () => {
   isEditing.value = false;
-  editedProfile.value = {
-    username: userStore.username,
-    email: userStore.email
-  };
+  editedProfile.value.username = userStore.username;
   errorMessage.value = '';
 };
 </script>
@@ -131,10 +113,10 @@ const cancelEdit = () => {
           </div>
           <div class="info-item">
             <label>Email:</label>
-            <span>{{ userStore.email }}</span>
+            <span class="readonly-email">{{ userStore.email }}</span>
           </div>
           <button class="edit-button" @click="toggleEdit">
-            <font-awesome-icon :icon="['fas', 'edit']" /> Edit Profile
+            <font-awesome-icon :icon="['fas', 'edit']" /> Edit Username
           </button>
         </div>
 
@@ -150,12 +132,7 @@ const cancelEdit = () => {
           </div>
           <div class="info-item">
             <label>Email:</label>
-            <input
-              v-model.trim="editedProfile.email"
-              type="email"
-              :placeholder="userStore.email"
-              @keyup.enter="saveChanges"
-            >
+            <span class="readonly-email">{{ userStore.email }}</span>
           </div>
           <div class="button-group">
             <button class="save-button" @click="saveChanges">
@@ -510,5 +487,27 @@ const cancelEdit = () => {
     padding: 10px;
     font-size: 13px;
   }
+}
+
+.readonly-email {
+  color: #666;
+  padding: 8px 0;
+  display: inline-block;
+}
+
+.info-item {
+  margin-bottom: 1rem;
+}
+
+.info-item label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #5D4037;
+  font-weight: 500;
+}
+
+.info-item span {
+  font-size: 1rem;
+  color: #333;
 }
 </style>
